@@ -104,11 +104,9 @@ button:focus-visible {
 
 
 
-
-
 .upload-area {
-  width: 300px;
-  height: 200px;
+  width: 400px;
+  height: 300px;
   border: 2px dashed #ccc;
   border-radius: 10px;
   display: flex;
@@ -119,6 +117,7 @@ button:focus-visible {
   background-color: #f0f0f0;
   padding: 20px;
   cursor: pointer;
+  overflow: hidden;
 }
 
 .upload-area p {

@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Handler } from "@netlify/functions";
 import * as dotenv from "dotenv";
+import { VISION_PROMPTS } from "./prompts";
 
 dotenv.config();
 
@@ -34,7 +35,7 @@ export const handler: Handler = async (event) => {
           mimeType: "image/jpeg",
         },
       },
-      "Caption this image.",
+      VISION_PROMPTS[0],
     ]);
 
     return {

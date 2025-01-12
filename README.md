@@ -8,7 +8,7 @@ A hassle-free setup to test LLM API for free
 
 ## Image classification with Gen AI (Gemini):
 
-Is it possible to upload a file (limited to 1MB in size) and get a description of it.
+Is it possible to upload a file (limited to 1MB in size) and get a classification of it. The prompt adopts [few-shots technique](https://www.promptingguide.ai/techniques/fewshot).
 
 ![Previes](doc/preview.png)
 

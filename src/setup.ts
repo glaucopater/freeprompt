@@ -184,6 +184,6 @@ async function updateHealthcheckStatus() {
 export async function updateHealthcheckStatusInterval() {
   while (true) {
     await updateHealthcheckStatus();
-    await new Promise((resolve) => setTimeout(resolve, 60000));
+    await new Promise((resolve) => setTimeout(resolve, 60 * 1000 * 5));
   }
 }
