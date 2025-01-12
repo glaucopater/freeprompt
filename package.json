@@ -1,0 +1,21 @@
+{
+  "name": "freeprompt",
+  "packageManager": "yarn@4.2.2",
+  "type": "module",
+  "author": "Glauco Pater",
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1",
+    "node-fetch": "^3.3.2"
+  },
+  "scripts": {
+    "dev": "yarn http-server ./public -p 8080",
+    "netlify-deploy": "netlify deploy --prod"
+  },
+  "volta": {
+    "node": "22.12.0"
+  }
+}
