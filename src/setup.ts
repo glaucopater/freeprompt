@@ -164,3 +164,26 @@ export const setupEvents = () => {
     uploadProgressText!.textContent = "0%";
   }
 };
+
+async function updateHealthcheckStatus() {
+  await fetch(`${FUNCTIONS_PATH}/healthcheck`, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  }).then((response) => {
+    if (response.status === 200) {
+      setupEvents();
+
+      document.getElementById("healthcheck-status")!.textContent = "🟢";
+    } else {
+      document.getElementById("healthcheck-status")!.textContent = "🔴";
+    }
+  });
+}
+
+export async function updateHealthcheckStatusInterval() {
+  while (true) {
+    await updateHealthcheckStatus();
+    await new Promise((resolve) => setTimeout(resolve, 60000));
+  }
+}

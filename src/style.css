@@ -104,9 +104,7 @@ button:focus-visible {
 
 
 
-body {
-  font-family: Arial, sans-serif;
-}
+
 
 .upload-area {
   width: 300px;
@@ -145,4 +143,36 @@ body {
 
 .show {
   display: block !important;
+}
+
+
+header {
+  color: #333;
+  padding: 20px;
+  text-align: center;
+}
+
+header h1 {
+  font-size: 36px;
+  margin-bottom: 10px;
+}
+
+header p {
+  font-size: 18px;
+  margin-bottom: 20px;
+}
+
+footer {
+  color: #666;
+  padding: 10px;
+  text-align: center;
+  clear: both;
+  position: relative;
+  bottom: 0;
+  width: 100%;
+}
+
+footer p {
+  font-size: 14px;
+  margin-bottom: 10px;
 }

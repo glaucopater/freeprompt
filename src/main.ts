@@ -1,9 +1,14 @@
 import "./style.css";
-import { setupEvents } from "./setup.ts";
+import { updateHealthcheckStatusInterval } from "./setup.ts";
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div>
-      <form
+    <header>
+      <h1>FreePrompt 🔍</h1>
+      <h3>Prompt processing LLM API</h3>            
+    </header>
+    <h5>Image classification with Gen AI (Gemini):</h5>
+    <form
       action="/upload-and-analyze"
       method="post"
       enctype="multipart/form-data"
@@ -89,7 +94,15 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
         </div>
       </div>
     </form>
+    <div>
+      <span class="text-muted">Status: </span>
+      <span id="healthcheck-status">🔴</span>
+    </div>    
+    <footer>
+      <p>Disclaimer: Images are not stored. All images are processed in real-time and deleted immediately after processing.</p>
+      <p><a href="https://github.com/glaucopater/freeprompt"><i class="fa-brands fa-github"></i> Github</a> </p>
+    </footer>
   </div>
 `;
 
-setupEvents();
+updateHealthcheckStatusInterval();
