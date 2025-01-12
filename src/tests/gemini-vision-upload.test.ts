@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { handler } from "./gemini-vision-upload";
+import { handler } from "../../netlify/functions/gemini-vision-upload";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { HandlerResponse } from "@netlify/functions";
 
