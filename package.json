@@ -1,21 +1,22 @@
 {
   "name": "freeprompt",
-  "packageManager": "yarn@4.2.2",
+  "private": true,
+  "version": "0.0.0",
   "type": "module",
-  "author": "Glauco Pater",
-  "version": "1.0.0",
-  "dependencies": {
-    "@google/generative-ai": "^0.21.0",
-    "dotenv": "^16.4.7"
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
   },
   "devDependencies": {
-    "node-fetch": "^3.3.2"
+    "@types/bootstrap": "^5.2.10",
+    "typescript": "~5.6.2",
+    "vite": "^6.0.5"
   },
-  "scripts": {
-    "dev": "ntl dev",
-    "deploy": "ntl deploy --prod"
-  },
-  "volta": {
-    "node": "22.12.0"
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "@popperjs/core": "^2.11.8",
+    "bootstrap": "^5.3.3",
+    "dotenv": "^16.4.7"
   }
 }
