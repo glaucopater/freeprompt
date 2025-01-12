@@ -175,3 +175,60 @@ footer p {
   font-size: 14px;
   margin-bottom: 10px;
 }
+
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+
+  a:hover {
+    color: #747bff;
+  }
+
+  button {
+    background-color: #f9f9f9;
+  }
+}
+
+@media (max-width: 768px) {
+  body {
+    margin: 0;
+  }
+}
+
+.upload-area {
+  width: 400px;
+  height: 300px;
+  border: 2px dashed #ccc;
+  border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  margin: 40px auto;
+  background-color: #f0f0f0;
+  padding: 20px;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.upload-area p {
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+.upload-area .file-info {
+  font-size: 14px;
+  color: #666;
+}
+
+.upload-area-dragover {
+  border: 2px dashed #aaa;
+  background: #ddd;
+}
+
+.upload-area-default {
+  border: 2px dashed #ccc;
+}

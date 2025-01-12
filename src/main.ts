@@ -1,38 +1,8 @@
 import "./style.css";
 import { updateHealthcheckStatusInterval } from "./setup.ts";
+import appDetails from "../package.json";
 
-document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
-  <div>
-    <header>
-      <h1>FreePrompt 🔍</h1>
-      <h3>Prompt processing LLM API</h3>            
-    </header>
-    <h5>Image classification with Gen AI (Gemini):</h5>
-    <form
-      action="/upload-and-analyze"
-      method="post"
-      enctype="multipart/form-data"
-      id="upload-form"
-    >
-      <div class="upload-area" id="upload-area">
-        <p>Drag and drop a file here or click to upload</p>
-        <p class="file-info" id="file-info"></p>
-        <input type="file" id="file-input" name="file" style="display: none" />
-      </div>
-      <button
-        type="submit"
-        class="btn btn-primary mx-auto d-block mt-4"
-        id="upload-button"
-        disabled
-      >
-        Upload and Analyze Images
-      </button>
-      <div class="text-center" id="spinner" style="display: none">
-        <div class="spinner-border" role="status">
-          <span class="visually-hidden">Uploading...</span>
-        </div>
-      </div>
-      <div
+const modalComponent = `<div
         class="modal fade"
         id="upload-modal"
         tabindex="-1"
@@ -92,16 +62,60 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
             </div>
           </div>
         </div>
+      </div>`;
+
+const formComponent = `<form
+      action="/upload-and-analyze"
+      method="post"
+      enctype="multipart/form-data"
+      id="upload-form"
+    >
+      <div class="upload-area" id="upload-area">
+        <p>Drag and drop a file here or click to upload</p>
+        <p class="file-info" id="file-info"></p>
+        <input type="file" id="file-input" name="file" style="display: none" />
       </div>
-    </form>
-    <div>
-      <span class="text-muted">Status: </span>
-      <span id="healthcheck-status">🔴</span>
-    </div>    
-    <footer>
-      <p>Disclaimer: Images are not stored. All images are processed in real-time and deleted immediately after processing.</p>
-      <p><a href="https://github.com/glaucopater/freeprompt"><i class="fa-brands fa-github"></i> Github</a> </p>
-    </footer>
+      <button
+        type="submit"
+        class="btn btn-primary mx-auto d-block mt-4"
+        id="upload-button"
+        disabled
+      >
+        Upload and Analyze Images
+      </button>
+      <div class="text-center" id="spinner" style="display: none">
+        <div class="spinner-border" role="status">
+          <span class="visually-hidden">Uploading...</span>
+        </div>
+      </div>
+      ${modalComponent}
+    </form>`;
+
+const headerComponent = `<header>
+    <h1>FreePrompt 🔍</h1>
+    <h3>Prompt processing LLM API</h3>            
+  </header>`;
+
+const statusComponent = `<div>
+    <span class="text-muted">Status: </span>
+    <span id="healthcheck-status">🔴</span>
+  </div>`;
+
+const footerComponent = `<footer>
+  <div>
+    <p>Disclaimer: Images are not stored. All images are processed in real-time and deleted immediately after processing.</p>
+    <p><a href="https://github.com/glaucopater/freeprompt"><i class="fa-brands fa-github"></i> Github</a></p>
+    <p>Version ${appDetails.version}</p>
+  </div>
+</footer>`;
+
+document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
+  <div>
+    ${headerComponent}
+    <h5>Image classification with Gen AI (Gemini):</h5>
+    ${formComponent}
+    ${statusComponent}   
+    ${footerComponent}
   </div>
 `;
 
