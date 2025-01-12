@@ -1,22 +1,25 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import * as bootstrap from "bootstrap";
 
-export function setupCounter(element: HTMLButtonElement) {
-  let counter = 0;
-  const setCounter = (count: number) => {
-    counter = count;
-    element.innerHTML = `count is ${counter}`;
-  };
-  element.addEventListener("click", () => setCounter(counter + 1));
-  setCounter(0);
-}
-
-// import * as bootstrap from "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.esm.min.js";
-
 const FUNCTIONS_PATH = "/.netlify/functions";
+const MAX_FILE_SIZE = 1024 * 1024;
+
+/**
+ * Set up all the event listeners for the page.
+ *
+ * Adds event listeners to the upload area, file input, upload button, and
+ * form. These event listeners handle drag and drop events, file input
+ * changes, form submissions, and modal close events.
+ *
+ * When a file is selected, it is analyzed by sending a POST request to the
+ * Netlify function at /.netlify/functions/gemini-vision-upload. The function
+ * returns a JSON object with a "message" property, which is displayed in the
+ * modal.
+ *
+ * The modal is also cleared when it is closed.
+ */
 
 export const setupEvents = () => {
-  console.log("setupEvents");
   const uploadArea: HTMLElement | null = document.getElementById("upload-area");
 
   const fileInput: HTMLInputElement | null = document.getElementById(
@@ -34,11 +37,6 @@ export const setupEvents = () => {
   const uploadForm: HTMLFormElement | null = document.getElementById(
     "upload-form"
   ) as HTMLFormElement | null;
-
-  /*
-  const uploadModal: HTMLElement | null =
-    document.getElementById("upload-modal");
-*/
 
   const uploadProgress: HTMLElement | null =
     document.getElementById("upload-progress");
@@ -102,7 +100,7 @@ export const setupEvents = () => {
       imageExtensions.includes(fileExtension) ||
       file.type.startsWith("image/")
     ) {
-      if (file.size > 1024 * 1024) {
+      if (file.size > MAX_FILE_SIZE) {
         fileInfo!.textContent = "File size exceeds 1MB";
         uploadButton!.disabled = true;
       } else {
@@ -118,7 +116,6 @@ export const setupEvents = () => {
   }
 
   async function analyzeFile(formData: Blob) {
-    console.log("analyzeFile", formData);
     const reader = new FileReader();
     reader.readAsDataURL(formData);
     reader.onload = async function () {
@@ -133,7 +130,6 @@ export const setupEvents = () => {
           body: JSON.stringify({ data: base64 }),
         }).then((response) => {
           // should resolve the promise and show the json result in the modal
-          console.log("response", response);
           response.json().then((data) => {
             responseContent!.innerHTML = data.message;
 
@@ -142,7 +138,6 @@ export const setupEvents = () => {
             }
           });
         });
-        // rest of your code
       } else {
         console.error("Error reading file");
       }
@@ -150,8 +145,8 @@ export const setupEvents = () => {
   }
   function formatFileSize(size: number) {
     if (size < 1024) return `${size} bytes`;
-    if (size < 1024 * 1024) return `${(size / 1024).toFixed(2)} KB`;
-    return `${(size / (1024 * 1024)).toFixed(2)} MB`;
+    if (size < MAX_FILE_SIZE) return `${(size / 1024).toFixed(2)} KB`;
+    return `${(size / MAX_FILE_SIZE).toFixed(2)} MB`;
   }
 
   responseModal!.addEventListener("hidden.bs.modal", () => {

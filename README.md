@@ -31,10 +31,16 @@ Why Netlify and their serverless functions? Because again, they are free and eas
 
 ## Running Locally 🏠
 
-To run it locally:
+To run the webapp locally (but without the serverless functions):
 ```sh
 yarn dev
 ```
+
+To run the webapp without the serverless functions enabled
+```sh
+yarn start
+```
+
 
 ## Deploying to Production 🚀
 
