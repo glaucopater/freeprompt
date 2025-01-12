@@ -68,7 +68,8 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
         id="response-modal"
         tabindex="-1"
         aria-labelledby="response-modal-label"
-        aria-hidden="true"
+        data-bs-backdrop="static"
+        data-bs-keyboard="false"
       >
         <div class="modal-dialog">
           <div class="modal-content">

@@ -11,11 +11,13 @@
   },
   "devDependencies": {
     "@types/bootstrap": "^5.2.10",
+    "@types/node": "^22.10.5",
     "typescript": "~5.6.2",
     "vite": "^6.0.5"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
+    "@netlify/functions": "^3.0.0",
     "@popperjs/core": "^2.11.8",
     "bootstrap": "^5.3.3",
     "dotenv": "^16.4.7"

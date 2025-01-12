@@ -210,6 +210,32 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@netlify/functions@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "@netlify/functions@npm:3.0.0"
+  dependencies:
+    "@netlify/serverless-functions-api": "npm:1.30.1"
+  checksum: 10c0/5d47cf2abd056e3984a889cb1efd87123ddf9d68a42642f0c058e0e3040a4a85990d2bf81be755a36609a4f0e8383df60e69cb8a52750d67bc5a35a80d86487e
+  languageName: node
+  linkType: hard
+
+"@netlify/node-cookies@npm:^0.1.0":
+  version: 0.1.0
+  resolution: "@netlify/node-cookies@npm:0.1.0"
+  checksum: 10c0/5d8034d1fd581930e8100af4e5710b79cb3bb0a0b743c716d0d8a1c347aad767fa75130323f1aaee78080a026a4cafd4eef7d11953de01098a661d765a497b16
+  languageName: node
+  linkType: hard
+
+"@netlify/serverless-functions-api@npm:1.30.1":
+  version: 1.30.1
+  resolution: "@netlify/serverless-functions-api@npm:1.30.1"
+  dependencies:
+    "@netlify/node-cookies": "npm:^0.1.0"
+    urlpattern-polyfill: "npm:8.0.2"
+  checksum: 10c0/af77cda0c8a17924e60693497e8ce4f6857a5bdd2a517dbdb646010293a75012da36cd373ff1f6845844e12d24be5db0c1cad2b8167f88072ece428218935aeb
+  languageName: node
+  linkType: hard
+
 "@npmcli/agent@npm:^3.0.0":
   version: 3.0.0
   resolution: "@npmcli/agent@npm:3.0.0"
@@ -392,6 +418,15 @@ __metadata:
   version: 1.0.6
   resolution: "@types/estree@npm:1.0.6"
   checksum: 10c0/cdfd751f6f9065442cd40957c07fd80361c962869aa853c1c2fd03e101af8b9389d8ff4955a43a6fcfa223dd387a089937f95be0f3eec21ca527039fd2d9859a
+  languageName: node
+  linkType: hard
+
+"@types/node@npm:^22.10.5":
+  version: 22.10.5
+  resolution: "@types/node@npm:22.10.5"
+  dependencies:
+    undici-types: "npm:~6.20.0"
+  checksum: 10c0/6a0e7d1fe6a86ef6ee19c3c6af4c15542e61aea2f4cee655b6252efb356795f1f228bc8299921e82924e80ff8eca29b74d9dd0dd5cc1a90983f892f740b480df
   languageName: node
   linkType: hard
 
@@ -689,8 +724,10 @@ __metadata:
   resolution: "freeprompt@workspace:."
   dependencies:
     "@google/generative-ai": "npm:^0.21.0"
+    "@netlify/functions": "npm:^3.0.0"
     "@popperjs/core": "npm:^2.11.8"
     "@types/bootstrap": "npm:^5.2.10"
+    "@types/node": "npm:^22.10.5"
     bootstrap: "npm:^5.3.3"
     dotenv: "npm:^16.4.7"
     typescript: "npm:~5.6.2"
@@ -1338,6 +1375,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"undici-types@npm:~6.20.0":
+  version: 6.20.0
+  resolution: "undici-types@npm:6.20.0"
+  checksum: 10c0/68e659a98898d6a836a9a59e6adf14a5d799707f5ea629433e025ac90d239f75e408e2e5ff086afc3cace26f8b26ee52155293564593fbb4a2f666af57fc59bf
+  languageName: node
+  linkType: hard
+
 "unique-filename@npm:^4.0.0":
   version: 4.0.0
   resolution: "unique-filename@npm:4.0.0"
@@ -1353,6 +1397,13 @@ __metadata:
   dependencies:
     imurmurhash: "npm:^0.1.4"
   checksum: 10c0/d324c5a44887bd7e105ce800fcf7533d43f29c48757ac410afd42975de82cc38ea2035c0483f4de82d186691bf3208ef35c644f73aa2b1b20b8e651be5afd293
+  languageName: node
+  linkType: hard
+
+"urlpattern-polyfill@npm:8.0.2":
+  version: 8.0.2
+  resolution: "urlpattern-polyfill@npm:8.0.2"
+  checksum: 10c0/5388bbe8459dbd8861ee7cb97904be915dd863a9789c2191c528056f16adad7836ec22762ed002fed44e8995d0f98bdfb75a606466b77233e70d0f61b969aaf9
   languageName: node
   linkType: hard
 

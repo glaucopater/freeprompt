@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { Handler } from "@netlify/functions";
 import * as dotenv from "dotenv";
 
 dotenv.config();
@@ -6,8 +7,7 @@ dotenv.config();
 const GOOGLE_API_KEY = process.env.NETLIFY_GOOGLE_API_KEY;
 const DEFAULT_MODEL = "models/gemini-1.5-pro";
 
-export const handler = async (event) => {
-
+export const handler: Handler = async (event) => {
   if (!GOOGLE_API_KEY) {
     return {
       statusCode: 500,
@@ -26,7 +26,7 @@ export const handler = async (event) => {
 
   if (event.body) {
     const { data } = JSON.parse(event.body);
-    const imageResp = Buffer.from(data, 'base64');
+    const imageResp = Buffer.from(data, "base64");
     const result = await model.generateContent([
       {
         inlineData: {
@@ -46,8 +46,6 @@ export const handler = async (event) => {
         "Content-Type": "application/json",
       },
     };
-
-
   }
 
   return {
@@ -59,5 +57,4 @@ export const handler = async (event) => {
       "Content-Type": "application/json",
     },
   };
-
 };
