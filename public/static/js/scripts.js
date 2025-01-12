@@ -1,3 +1,5 @@
+const FUNCTIONS_PATH = "/.netlify/functions";
+
 const uploadArea = document.getElementById("upload-area");
 const fileInput = document.getElementById("file-input");
 const fileInfo = document.getElementById("file-info");
@@ -16,19 +18,19 @@ uploadArea.addEventListener("click", () => {
 
 uploadArea.addEventListener("dragover", (e) => {
   e.preventDefault();
-  uploadArea.style.border = "2px dashed #aaa";
-  uploadArea.style.background = "#ddd";
+  uploadArea.classList.add("upload-area-dragover");
+  uploadArea.classList.remove("upload-area-default");
 });
 
 uploadArea.addEventListener("dragleave", () => {
-  uploadArea.style.border = "2px dashed #ccc";
-  uploadArea.style.background = "#f0f0f0";
+  uploadArea.classList.add("upload-area-default");
+  uploadArea.classList.remove("upload-area-dragover");
 });
 
 uploadArea.addEventListener("drop", (e) => {
   e.preventDefault();
-  uploadArea.style.border = "2px dashed #ccc";
-  uploadArea.style.background = "#f0f0f0";
+  uploadArea.classList.add("upload-area-default");
+  uploadArea.classList.remove("upload-area-dragover");
   const files = e.dataTransfer.files;
   handleFiles(files);
 });
@@ -75,9 +77,8 @@ async function analyzeFile(formData) {
   reader.readAsDataURL(formData);
   reader.onload = async function () {
     const base64 = reader.result.split(",")[1];
-    console.log(base64);
     // pass formData to the fetch
-    const response = await fetch("/.netlify/functions/gemini-vision-upload", {
+    const response = await fetch(`${FUNCTIONS_PATH}/gemini-vision-upload`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -92,29 +93,6 @@ async function analyzeFile(formData) {
     });
   };
 }
-
-function uploadFile(formData) {
-  spinner.style.display = "block";
-  const uploadButton = document.getElementById("upload-button");
-  uploadButton.disabled = true;
-  const xhr = new XMLHttpRequest();
-  xhr.open("POST", "/upload-and-analyze", true);
-  xhr.upload.addEventListener("progress", (e) => {
-    const percent = Math.round((e.loaded / e.total) * 100);
-    uploadProgress.style.width = `${percent}%`;
-    uploadProgressText.textContent = `${percent}%`;
-    uploadModal.style.display = "block";
-  });
-  xhr.addEventListener("load", () => {
-    spinner.style.display = "none";
-    uploadButton.disabled = false;
-    uploadModal.style.display = "none";
-    responseContent.innerHTML = xhr.responseText;
-    new bootstrap.Modal(responseModal).show();
-  });
-  xhr.send(formData);
-}
-
 function formatFileSize(size) {
   if (size < 1024) return `${size} bytes`;
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(2)} KB`;
