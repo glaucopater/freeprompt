@@ -102,10 +102,9 @@ button:focus-visible {
 }
 
 
-
 .upload-area {
-  width: 400px;
-  height: 300px;
+  width: auto;
+  min-height: 300px;
   border: 2px dashed #ccc;
   border-radius: 10px;
   display: flex;
