@@ -1,6 +1,7 @@
 import "./style.css";
 import { updateHealthcheckStatusInterval } from "./setup.ts";
 import appDetails from "../package.json";
+import logo from "./assets/images/logo-no-bg.png";
 
 const modalComponent = `<div
         class="modal fade"
@@ -93,7 +94,7 @@ const formComponent = `<form
 
 const headerComponent = `<header>
     <h1>FreePrompt 🔍</h1>
-    <h3>Prompt processing LLM API</h3>            
+    <h3>Totally Free image classification with and LLM API integration</h3>            
   </header>`;
 
 const statusComponent = `<div>
@@ -112,6 +113,7 @@ const footerComponent = `<footer>
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div>
     ${headerComponent}
+    <img src='${logo}' alt='Logo' class='logo' />
     <h5>Image classification with Gen AI (Gemini):</h5>
     ${formComponent}
     ${statusComponent}   
