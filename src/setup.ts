@@ -1,5 +1,8 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import * as bootstrap from "bootstrap";
+import { ResponseComponent } from "./components/ResponseComponent";
+import { parseResponseData } from "./utils";
+import { AnalysisData } from "./types";
 
 const FUNCTIONS_PATH = "/.netlify/functions";
 const MAX_FILE_SIZE = 1024 * 1024;
@@ -45,8 +48,23 @@ export const setupEvents = () => {
   );
   const responseModal: HTMLElement | null =
     document.getElementById("response-modal");
+
   const responseContent: HTMLElement | null =
     document.getElementById("response-content");
+
+  const app = document.getElementById("app");
+  if (app) {
+    app.append(
+      ResponseComponent({
+        description: "",
+        categories: [],
+        palette: [],
+      })
+    );
+  }
+
+  const responseComponent: HTMLElement | null =
+    document.getElementById("response-component");
 
   uploadArea?.addEventListener("click", () => {
     fileInput?.click();
@@ -132,9 +150,17 @@ export const setupEvents = () => {
           // should resolve the promise and show the json result in the modal
           response.json().then((data) => {
             responseContent!.innerHTML = data.message;
+            const analysisData: AnalysisData = parseResponseData(data.message);
 
             if (responseModal) {
               new bootstrap.Modal(responseModal).show();
+              // show response-component with boostrap
+              responseModal.style.display = "block";
+            }
+
+            if (responseComponent) {
+              responseComponent.innerHTML =
+                ResponseComponent(analysisData).innerHTML;
             }
           });
         });

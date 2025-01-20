@@ -3,6 +3,8 @@ import { updateHealthcheckStatusInterval } from "./setup.ts";
 import appDetails from "../package.json";
 import logo from "./assets/images/logo-no-bg.png";
 
+import { ResponseComponent } from "./components/ResponseComponent/index";
+
 const modalComponent = `<div
         class="modal fade"
         id="upload-modal"
