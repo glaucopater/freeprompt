@@ -8,12 +8,14 @@
     "start": "ntl dev",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "vitest",
+    "prepare": "husky install"
   },
   "devDependencies": {
     "@types/bootstrap": "^5.2.10",
     "@types/lambda-tester": "^4",
     "@types/node": "^22.10.5",
+    "husky": "^9.1.7",
     "lambda-tester": "^4.0.1",
     "typescript": "~5.6.2",
     "vite": "^6.0.5",

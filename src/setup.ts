@@ -1,5 +1,4 @@
 import "bootstrap/dist/css/bootstrap.min.css";
-import * as bootstrap from "bootstrap";
 import { ResponseComponent } from "./components/ResponseComponent";
 import { parseResponseData } from "./utils";
 import { AnalysisData } from "./types";
@@ -41,11 +40,6 @@ export const setupEvents = () => {
     "upload-form"
   ) as HTMLFormElement | null;
 
-  const uploadProgress: HTMLElement | null =
-    document.getElementById("upload-progress");
-  const uploadProgressText: HTMLElement | null = document.getElementById(
-    "upload-progress-text"
-  );
   const analysisResults: HTMLElement | null =
     document.getElementById("analysis-results");
 
@@ -204,18 +198,6 @@ export const setupEvents = () => {
     if (size < 1024) return `${size} bytes`;
     if (size < MAX_FILE_SIZE) return `${(size / 1024).toFixed(2)} KB`;
     return `${(size / MAX_FILE_SIZE).toFixed(2)} MB`;
-  }
-
-  function resetForm() {
-    if (uploadArea) uploadArea.style.border = "2px dashed #ccc";
-    if (uploadArea) uploadArea.style.background = "#f0f0f0";
-    if (fileInfo) fileInfo.textContent = "";
-    if (uploadButton) uploadButton.disabled = true;
-    if (spinner) spinner.style.display = "none";
-    if (fileInput) fileInput.value = "";
-    if (uploadProgress) uploadProgress.style.width = "0%";
-    if (uploadProgressText) uploadProgressText.textContent = "0%";
-    if (analysisResults) analysisResults.style.display = "none";
   }
 };
 

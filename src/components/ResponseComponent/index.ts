@@ -1,10 +1,7 @@
 import { AnalysisData } from "../../types";
 
-let analysisData: AnalysisData;
-
 export const updateAnalysisData = (data: AnalysisData) => {
   console.log("Raw Analysis Data:", data);
-  analysisData = data;
 
   const resultsContainer = document.getElementById("analysis-results");
   if (resultsContainer) {
