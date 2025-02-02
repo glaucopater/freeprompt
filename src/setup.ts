@@ -46,25 +46,8 @@ export const setupEvents = () => {
   const uploadProgressText: HTMLElement | null = document.getElementById(
     "upload-progress-text"
   );
-  const responseModal: HTMLElement | null =
-    document.getElementById("response-modal");
-
-  const responseContent: HTMLElement | null =
-    document.getElementById("response-content");
-
-  const app = document.getElementById("app");
-  if (app) {
-    app.append(
-      ResponseComponent({
-        description: "",
-        categories: [],
-        palette: [],
-      })
-    );
-  }
-
-  const responseComponent: HTMLElement | null =
-    document.getElementById("response-component");
+  const analysisResults: HTMLElement | null =
+    document.getElementById("analysis-results");
 
   uploadArea?.addEventListener("click", () => {
     fileInput?.click();
@@ -83,15 +66,30 @@ export const setupEvents = () => {
 
   uploadArea?.addEventListener("drop", (e) => {
     e.preventDefault();
+    e.stopPropagation();
     uploadArea?.classList.add("upload-area-default");
     uploadArea?.classList.remove("upload-area-dragover");
-    const files = e.dataTransfer?.files;
-    handleFiles(files);
+
+    const dt = e.dataTransfer;
+    if (dt?.files && dt.files.length > 0) {
+      const file = dt.files[0];
+
+      // Create a new FileList-like object
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+
+      if (fileInput) {
+        fileInput.files = dataTransfer.files;
+        handleFiles(dataTransfer.files);
+      }
+    }
   });
 
-  fileInput?.addEventListener("change", () => {
-    const files = fileInput?.files;
-    handleFiles(files);
+  fileInput?.addEventListener("change", (e) => {
+    const input = e.target as HTMLInputElement;
+    if (input.files) {
+      handleFiles(input.files);
+    }
   });
 
   if (uploadForm) {
@@ -108,12 +106,19 @@ export const setupEvents = () => {
     });
   }
 
-  function handleFiles(files: string | any[] | FileList | null | undefined) {
-    if (files === null || files === undefined) return;
-    if (files.length === 0) return;
+  function handleFiles(files: FileList | null) {
+    if (!files?.length) return;
+
     const file = files[0];
     const imageExtensions = ["jpg", "jpeg", "png", "gif", "bmp"];
-    const fileExtension: string = file.name.split(".").pop().toLowerCase();
+    const fileExtension = file.name.split(".").pop()?.toLowerCase() || "";
+    const imagePreview = document.getElementById(
+      "image-preview"
+    ) as HTMLImageElement;
+    const autoUploadSwitch = document.getElementById(
+      "auto-upload-switch"
+    ) as HTMLInputElement;
+
     if (
       imageExtensions.includes(fileExtension) ||
       file.type.startsWith("image/")
@@ -121,53 +126,79 @@ export const setupEvents = () => {
       if (file.size > MAX_FILE_SIZE) {
         fileInfo!.textContent = "File size exceeds 1MB";
         uploadButton!.disabled = true;
+        imagePreview.classList.add("d-none");
       } else {
         fileInfo!.textContent = `File: ${file.name} (${formatFileSize(
           file.size
         )})`;
         uploadButton!.disabled = false;
+
+        // Show image preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (imagePreview && e.target?.result) {
+            imagePreview.src = e.target.result as string;
+            imagePreview.classList.remove("d-none");
+          }
+        };
+        reader.readAsDataURL(file);
+
+        // Auto upload if enabled
+        if (autoUploadSwitch?.checked) {
+          analyzeFile(file);
+        }
       }
     } else {
       fileInfo!.textContent = "Only image files are allowed";
       uploadButton!.disabled = true;
+      imagePreview.classList.add("d-none");
     }
   }
 
-  async function analyzeFile(formData: Blob) {
-    const reader = new FileReader();
-    reader.readAsDataURL(formData);
-    reader.onload = async function () {
-      if (reader.result !== null) {
-        const base64 = (reader.result as string).split(",")[1];
-        // pass formData to the fetch
-        await fetch(`${FUNCTIONS_PATH}/gemini-vision-upload`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ data: base64 }),
-        }).then((response) => {
-          // should resolve the promise and show the json result in the modal
-          response.json().then((data) => {
-            responseContent!.innerHTML = data.message;
-            const analysisData: AnalysisData = parseResponseData(data.message);
+  async function analyzeFile(file: Blob) {
+    if (spinner) spinner.style.display = "block";
+    if (uploadButton) uploadButton.disabled = true;
 
-            if (responseModal) {
-              new bootstrap.Modal(responseModal).show();
-              // show response-component with boostrap
-              responseModal.style.display = "block";
-            }
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
 
-            if (responseComponent) {
-              responseComponent.innerHTML =
-                ResponseComponent(analysisData).innerHTML;
-            }
-          });
-        });
-      } else {
-        console.error("Error reading file");
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          if (reader.result !== null) {
+            resolve((reader.result as string).split(",")[1]);
+          } else {
+            reject(new Error("Failed to read file"));
+          }
+        };
+        reader.onerror = () => reject(reader.error);
+      });
+
+      const response = await fetch(`${FUNCTIONS_PATH}/gemini-vision-upload`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ data: base64 }),
+      });
+
+      const data = await response.json();
+      const analysisData: AnalysisData = parseResponseData(data.message);
+      console.log("Raw Response:", data.message);
+
+      if (analysisResults) {
+        analysisResults.style.display = "block";
+        analysisResults.innerHTML = "";
+        analysisResults.append(ResponseComponent(analysisData));
       }
-    };
+    } catch (error) {
+      console.error("Analysis error:", error);
+      if (fileInfo)
+        fileInfo.textContent = "Error analyzing image. Please try again.";
+    } finally {
+      if (spinner) spinner.style.display = "none";
+      if (uploadButton) uploadButton.disabled = false;
+    }
   }
   function formatFileSize(size: number) {
     if (size < 1024) return `${size} bytes`;
@@ -175,36 +206,41 @@ export const setupEvents = () => {
     return `${(size / MAX_FILE_SIZE).toFixed(2)} MB`;
   }
 
-  responseModal!.addEventListener("hidden.bs.modal", () => {
-    resetForm();
-  });
-
   function resetForm() {
-    uploadArea!.style.border = "2px dashed #ccc";
-    uploadArea!.style.background = "#f0f0f0";
-    fileInfo!.textContent = "";
-    uploadButton!.disabled = true;
-    spinner!.style.display = "none";
-    fileInput!.value = "";
-    uploadProgress!.style.width = "0%";
-    uploadProgressText!.textContent = "0%";
+    if (uploadArea) uploadArea.style.border = "2px dashed #ccc";
+    if (uploadArea) uploadArea.style.background = "#f0f0f0";
+    if (fileInfo) fileInfo.textContent = "";
+    if (uploadButton) uploadButton.disabled = true;
+    if (spinner) spinner.style.display = "none";
+    if (fileInput) fileInput.value = "";
+    if (uploadProgress) uploadProgress.style.width = "0%";
+    if (uploadProgressText) uploadProgressText.textContent = "0%";
+    if (analysisResults) analysisResults.style.display = "none";
   }
 };
 
 async function updateHealthcheckStatus() {
-  await fetch(`${FUNCTIONS_PATH}/healthcheck`, {
-    headers: {
-      "Content-Type": "application/json",
-    },
-  }).then((response) => {
-    if (response.status === 200) {
-      setupEvents();
+  try {
+    const response = await fetch(`${FUNCTIONS_PATH}/healthcheck`, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
 
-      document.getElementById("healthcheck-status")!.textContent = "🟢";
+    const healthStatus = document.getElementById("healthcheck-status");
+    if (!healthStatus) return;
+
+    if (response.status === 200) {
+      healthStatus.textContent = "🟢";
+      setupEvents();
     } else {
-      document.getElementById("healthcheck-status")!.textContent = "🔴";
+      healthStatus.textContent = "🔴";
     }
-  });
+  } catch (error) {
+    console.error("Healthcheck error:", error);
+    const healthStatus = document.getElementById("healthcheck-status");
+    if (healthStatus) healthStatus.textContent = "🔴";
+  }
 }
 
 export async function updateHealthcheckStatusInterval() {

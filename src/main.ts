@@ -3,9 +3,7 @@ import { updateHealthcheckStatusInterval } from "./setup.ts";
 import appDetails from "../package.json";
 import logo from "./assets/images/logo-no-bg.png";
 
-import { ResponseComponent } from "./components/ResponseComponent/index";
-
-const modalComponent = `<div
+const uploadProgressModal = `<div
         class="modal fade"
         id="upload-modal"
         tabindex="-1"
@@ -40,64 +38,50 @@ const modalComponent = `<div
             </div>
           </div>
         </div>
-      </div>
-      <div
-        class="modal fade"
-        id="response-modal"
-        tabindex="-1"
-        aria-labelledby="response-modal-label"
-        data-bs-backdrop="static"
-        data-bs-keyboard="false"
-      >
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" id="response-modal-label">Response</h5>
-              <button
-                type="button"
-                class="btn-close"
-                data-bs-dismiss="modal"
-                aria-label="Close"
-              ></button>
-            </div>
-            <div class="modal-body">
-              <div id="response-content"></div>
-            </div>
-          </div>
-        </div>
       </div>`;
 
-const formComponent = `<form
-      action="/upload-and-analyze"
-      method="post"
-      enctype="multipart/form-data"
-      id="upload-form"
-    >
-      <div class="upload-area" id="upload-area">
-        <p>Drag and drop a file here or click to upload</p>
-        <p class="file-info" id="file-info"></p>
-        <input type="file" id="file-input" name="file" style="display: none" />
-      </div>
-      <button
-        type="submit"
-        class="btn btn-primary mx-auto d-block mt-4"
-        id="upload-button"
-        disabled
+const uploadComponent = `
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h2 class="fs-4 fw-semibold mb-4">Uploaded Image</h2>
+      <form
+        action="/upload-and-analyze"
+        method="post"
+        enctype="multipart/form-data"
+        id="upload-form"
       >
-        Upload and Analyze Images
-      </button>
-      <div class="text-center" id="spinner" style="display: none">
-        <div class="spinner-border" role="status">
-          <span class="visually-hidden">Uploading...</span>
+        <div class="upload-area" id="upload-area">
+          <p>Drag and drop a file here or click to upload</p>
+          <p class="file-info" id="file-info"></p>
+          <input type="file" id="file-input" name="file" style="display: none" accept="image/*" />
+          <img id="image-preview" class="img-fluid mt-3 d-none" alt="Preview" style="max-height: 200px;" />
         </div>
-      </div>
-      ${modalComponent}
-    </form>`;
+        <div class="form-check form-switch mt-3">
+          <input class="form-check-input" type="checkbox" role="switch" id="auto-upload-switch" checked>
+          <label class="form-check-label" for="auto-upload-switch">Auto-upload and analyze</label>
+        </div>
+        <button
+          type="submit"
+          class="btn btn-primary mx-auto d-block mt-4"
+          id="upload-button"
+          disabled
+        >
+          Upload and Analyze Images
+        </button>
+        <div class="text-center" id="spinner" style="display: none">
+          <div class="spinner-border" role="status">
+            <span class="visually-hidden">Uploading...</span>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+  ${uploadProgressModal}`;
 
 const headerComponent = `<header>
-    <h1>FreePrompt 🔍</h1>
-    <h3>Totally Free image classification with and LLM API integration</h3>            
-  </header>`;
+  <img src='${logo}' alt='FreePrompt' title='FreePrompt' class='logo'  />
+  <h2>Totally Free image classification with and LLM API integration</h2>            
+</header>`;
 
 const statusComponent = `<div>
     <span class="text-muted">Status: </span>
@@ -113,11 +97,19 @@ const footerComponent = `<footer>
 </footer>`;
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
-  <div>
-    ${headerComponent}
-    <img src='${logo}' alt='Logo' class='logo' />
-    <h5>Image classification with Gen AI (Gemini):</h5>
-    ${formComponent}
+  <div class="min-vh-100 d-flex flex-column">
+    ${headerComponent}    
+    <h5>Experiment 1: Image classification with Gen AI (Gemini)</h5>
+    <div class="container flex-grow-1 py-4">
+      <div class="row g-4">
+        <div class="col-12 col-lg-5">
+          ${uploadComponent}
+        </div>
+        <div class="col-12 col-lg-7">
+          <div id="analysis-results" style="display: none"></div>
+        </div>
+      </div>
+    </div>
     ${statusComponent}   
     ${footerComponent}
   </div>

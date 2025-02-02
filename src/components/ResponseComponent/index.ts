@@ -3,7 +3,15 @@ import { AnalysisData } from "../../types";
 let analysisData: AnalysisData;
 
 export const updateAnalysisData = (data: AnalysisData) => {
+  console.log("Raw Analysis Data:", data);
   analysisData = data;
+
+  const resultsContainer = document.getElementById("analysis-results");
+  if (resultsContainer) {
+    resultsContainer.style.display = "block";
+    resultsContainer.innerHTML = "";
+    resultsContainer.append(ResponseComponent(data));
+  }
 };
 
 function createSectionTitle(iconName: string, title: string): HTMLDivElement {
@@ -26,18 +34,20 @@ function createSectionTitle(iconName: string, title: string): HTMLDivElement {
 
 function createColorSwatch(color: string): HTMLDivElement {
   const container = document.createElement("div");
-  container.className = "d-flex flex-column align-items-center gap-1";
+  container.className = "d-flex flex-column gap-2";
 
   const swatch = document.createElement("div");
-  swatch.className = "rounded border";
-  swatch.style.width = "48px";
-  swatch.style.height = "48px";
+  swatch.style.width = "64px";
+  swatch.style.height = "64px";
   swatch.style.backgroundColor = color;
-  swatch.style.boxShadow = "inset 0 2px 4px rgba(0,0,0,0.05)";
+  swatch.style.border = "1px solid #dee2e6";
+  swatch.style.borderRadius = "4px";
+  swatch.style.boxShadow = "0 1px 3px rgba(0,0,0,0.1)";
 
   const text = document.createElement("span");
-  text.className = "small font-monospace text-secondary";
-  text.textContent = color;
+  text.className = "font-monospace text-secondary";
+  text.style.fontSize = "12px";
+  text.textContent = color.toUpperCase();
 
   container.append(swatch, text);
   return container;
@@ -46,44 +56,28 @@ function createColorSwatch(color: string): HTMLDivElement {
 export function ResponseComponent(analysisData: AnalysisData): HTMLDivElement {
   const container = document.createElement("div");
   container.id = "response-component";
-  container.className = "min-vh-100 bg-light py-4";
-
-  const content = document.createElement("div");
-  content.className = "container";
-
-  const row = document.createElement("div");
-  row.className = "row justify-content-center";
-
-  const col = document.createElement("div");
-  col.className = "col-12 col-lg-8";
-
-  // Header
-  const header = document.createElement("div");
-  header.className = "text-center mb-4";
-  header.innerHTML = `
-      <h1 class="display-5 fw-bold mb-2">Image Analysis Results</h1>
-      <p class="text-secondary">Detailed breakdown of your image</p>
-    `;
+  container.className = "d-flex flex-column gap-3";
 
   // Description Section
   const descriptionSection = document.createElement("div");
-  descriptionSection.className = "card shadow-sm mb-4";
+  descriptionSection.className = "bg-white rounded-3 p-4";
   const descriptionBody = document.createElement("div");
-  descriptionBody.className = "card-body";
-  descriptionBody.append(createSectionTitle("image", "Description"));
+  descriptionBody.className = "";
+  descriptionBody.append(createSectionTitle("image-plus", "Description"));
 
   const description = document.createElement("p");
-  description.className = "text-secondary mb-0";
+  description.className = "text-secondary mb-0 text-justify";
+  description.style.textAlign = "justify";
   description.textContent = analysisData.description;
   descriptionBody.append(description);
   descriptionSection.append(descriptionBody);
 
   // Categories Section
   const categoriesSection = document.createElement("div");
-  categoriesSection.className = "card shadow-sm mb-4";
+  categoriesSection.className = "bg-white rounded-3 p-4";
   const categoriesBody = document.createElement("div");
-  categoriesBody.className = "card-body";
-  categoriesBody.append(createSectionTitle("tag", "Categories"));
+  categoriesBody.className = "";
+  categoriesBody.append(createSectionTitle("tags", "Categories"));
 
   const categoriesContainer = document.createElement("div");
   categoriesContainer.className = "d-flex flex-wrap gap-2";
@@ -91,7 +85,7 @@ export function ResponseComponent(analysisData: AnalysisData): HTMLDivElement {
   analysisData.categories.forEach((category) => {
     const tag = document.createElement("span");
     tag.className =
-      "badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2";
+      "badge bg-primary-subtle text-primary rounded-pill px-3 py-2";
     tag.textContent = category;
     categoriesContainer.append(tag);
   });
@@ -101,13 +95,13 @@ export function ResponseComponent(analysisData: AnalysisData): HTMLDivElement {
 
   // Color Palette Section
   const paletteSection = document.createElement("div");
-  paletteSection.className = "card shadow-sm mb-4";
+  paletteSection.className = "bg-white rounded-3 p-4";
   const paletteBody = document.createElement("div");
-  paletteBody.className = "card-body";
+  paletteBody.className = "";
   paletteBody.append(createSectionTitle("palette", "Color Palette"));
 
   const paletteContainer = document.createElement("div");
-  paletteContainer.className = "d-flex justify-content-center flex-wrap gap-4";
+  paletteContainer.className = "d-flex gap-4";
 
   analysisData.palette.forEach((color) => {
     paletteContainer.append(createColorSwatch(color));
@@ -117,23 +111,7 @@ export function ResponseComponent(analysisData: AnalysisData): HTMLDivElement {
   paletteSection.append(paletteBody);
 
   // Combine all sections
-  col.append(header, descriptionSection, categoriesSection, paletteSection);
-  row.append(col);
-  content.append(row);
-  container.append(content);
+  container.append(descriptionSection, categoriesSection, paletteSection);
 
   return container;
 }
-
-// Initialize the app
-
-/*
-document.addEventListener("DOMContentLoaded", () => {
-  const app = document.getElementById("app");
-  if (app) {
-    app.append(createApp());
-    // Initialize Lucide icons
-    lucide.createIcons();
-  }
-});
-*/
