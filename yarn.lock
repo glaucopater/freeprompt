@@ -1179,6 +1179,7 @@ __metadata:
     "@types/node": "npm:^22.10.5"
     bootstrap: "npm:^5.3.3"
     dotenv: "npm:^16.4.7"
+    husky: "npm:^9.1.7"
     lambda-tester: "npm:^4.0.1"
     typescript: "npm:~5.6.2"
     vite: "npm:^6.0.5"
@@ -1261,6 +1262,15 @@ __metadata:
     agent-base: "npm:^7.1.2"
     debug: "npm:4"
   checksum: 10c0/f729219bc735edb621fa30e6e84e60ee5d00802b8247aac0d7b79b0bd6d4b3294737a337b93b86a0bd9e68099d031858a39260c976dc14cdbba238ba1f8779ac
+  languageName: node
+  linkType: hard
+
+"husky@npm:^9.1.7":
+  version: 9.1.7
+  resolution: "husky@npm:9.1.7"
+  bin:
+    husky: bin.js
+  checksum: 10c0/35bb110a71086c48906aa7cd3ed4913fb913823715359d65e32e0b964cb1e255593b0ae8014a5005c66a68e6fa66c38dcfa8056dbbdfb8b0187c0ffe7ee3a58f
   languageName: node
   linkType: hard
 
