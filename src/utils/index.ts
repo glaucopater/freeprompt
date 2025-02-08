@@ -1,14 +1,20 @@
 import { MAX_FILE_SIZE } from "../constants";
-import { AnalysisData } from "../types";
+import { AnalysisVisionData } from "../types";
 
-export const parseResponseData = (data: string) => {
+export const parseVisionResponseData = (data: string) => {
   const [description, categories, palette] = data.split("\n\n");
 
   const responseData = {
     description,
     categories: categories.split(",").map((category) => category.trim()),
     palette: palette.split(",").map((color) => color.trim()),
-  } as AnalysisData;
+  } as AnalysisVisionData;
+
+  return responseData;
+};
+
+export const parseAudioResponseData = (data: string) => {
+  const responseData = data.replace("\n\n", "");
 
   return responseData;
 };

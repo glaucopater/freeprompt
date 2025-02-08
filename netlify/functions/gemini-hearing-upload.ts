@@ -4,6 +4,7 @@ import * as dotenv from "dotenv";
 import { GEMINI_MODELS } from "./models";
 import { FileState, GoogleAIFileManager } from "@google/generative-ai/server";
 import { AUDIO_PROMPTS } from "./prompts";
+import { AUDIO_FILES } from "../../src/constants";
 // Make sure to include these imports:
 // import { GoogleAIFileManager, FileState } from "@google/generative-ai/server";
 // import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -34,10 +35,13 @@ export const handler: Handler = async (event) => {
 
   const fileManager = new GoogleAIFileManager(GOOGLE_API_KEY);
 
-  const uploadResult = await fileManager.uploadFile(`${mediaPath}/sample.mp3`, {
-    mimeType: "audio/mp3",
-    displayName: "Audio sample",
-  });
+  const uploadResult = await fileManager.uploadFile(
+    `${mediaPath}/${AUDIO_FILES[1]}`,
+    {
+      mimeType: "audio/mp3",
+      displayName: "Audio sample",
+    }
+  );
 
   let file = await fileManager.getFile(uploadResult.file.name);
   while (file.state === FileState.PROCESSING) {

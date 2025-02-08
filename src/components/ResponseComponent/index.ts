@@ -1,8 +1,8 @@
-import { AnalysisData } from "../../types";
+import { AnalysisVisionData } from "../../types";
 import { ColorSwatch } from "../ColorSwatch";
 import { SectionTitle } from "../SectionTitle";
 
-export const updateVisionAnalysisData = (data: AnalysisData) => {
+export const updateVisionAnalysisData = (data: AnalysisVisionData) => {
   console.log("Raw Analysis Data:", data);
 
   const resultsContainer = document.getElementById("analysis-vision-results");
@@ -13,7 +13,9 @@ export const updateVisionAnalysisData = (data: AnalysisData) => {
   }
 };
 
-export function ResponseComponent(analysisData: AnalysisData): HTMLDivElement {
+export function ResponseComponent(
+  analysisData: AnalysisVisionData
+): HTMLDivElement {
   const container = document.createElement("div");
   container.id = "response-component";
   container.className = "d-flex flex-column gap-3";

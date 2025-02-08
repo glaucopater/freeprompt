@@ -1,8 +1,13 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import { ResponseComponent } from "./components/ResponseComponent";
-import { formatFileSize, parseResponseData } from "./utils";
-import { AnalysisData } from "./types";
+import {
+  formatFileSize,
+  parseAudioResponseData,
+  parseVisionResponseData,
+} from "./utils";
+import { AnalysisVisionData } from "./types";
 import { FUNCTIONS_PATH, MAX_FILE_SIZE } from "./constants";
+import { resolve } from "path";
 
 /**
  * Set up all the event listeners for the page.
@@ -39,8 +44,12 @@ export const setupEvents = () => {
     "upload-form"
   ) as HTMLFormElement | null;
 
-  const analysisResults: HTMLElement | null = document.getElementById(
+  const analysisVisionResults: HTMLElement | null = document.getElementById(
     "analysis-vision-results"
+  );
+
+  const analysisAudioResults: HTMLElement | null = document.getElementById(
+    "analysis-audio-results"
   );
 
   uploadArea?.addEventListener("click", () => {
@@ -95,7 +104,7 @@ export const setupEvents = () => {
       if (!file) {
         return;
       } else {
-        analyzeFile(file as Blob);
+        analyzeImageFile(file as Blob);
       }
     });
     // endregion Upload Area
@@ -106,12 +115,38 @@ export const setupEvents = () => {
       "trigger-audio-transcription-button"
     ) as HTMLButtonElement | null;
 
-    triggerAudioTranscriptionButton?.addEventListener("click", () => {
-      fetch(`${FUNCTIONS_PATH}/gemini-hearing-upload`, {
+    triggerAudioTranscriptionButton?.addEventListener("click", async () => {
+      console.log("triggerAudioTranscriptionButton");
+      const response = await fetch(`${FUNCTIONS_PATH}/gemini-hearing-upload`, {
         headers: {
           "Content-Type": "application/json",
         },
       });
+
+      /*
+      if (response.status === 429) {
+        console.log("Too many requests");
+        return;
+      } else if (response.status === 500) {
+        console.log("Internal Server Error");
+        return;
+      } else if (response.status === 200) {
+        console.log("Success");
+      }
+    */
+      {
+        const data = await response.json();
+        const analysisAudioData = data.message;
+        console.log("Raw Response:", data.message);
+
+        if (analysisAudioResults) {
+          analysisAudioResults.style.display = "block";
+          analysisAudioResults.innerHTML = "";
+          analysisAudioResults.append(
+            parseAudioResponseData(analysisAudioData)
+          );
+        }
+      }
     });
 
     // endregion audio
@@ -156,7 +191,7 @@ export const setupEvents = () => {
 
         // Auto upload if enabled
         if (autoUploadSwitch?.checked) {
-          analyzeFile(file);
+          analyzeImageFile(file);
         }
       }
     } else {
@@ -166,7 +201,7 @@ export const setupEvents = () => {
     }
   }
 
-  async function analyzeFile(file: Blob) {
+  async function analyzeImageFile(file: Blob) {
     if (spinner) spinner.style.display = "block";
     if (uploadButton) uploadButton.disabled = true;
 
@@ -194,13 +229,15 @@ export const setupEvents = () => {
       });
 
       const data = await response.json();
-      const analysisData: AnalysisData = parseResponseData(data.message);
+      const analysisVisionData: AnalysisVisionData = parseVisionResponseData(
+        data.message
+      );
       console.log("Raw Response:", data.message);
 
-      if (analysisResults) {
-        analysisResults.style.display = "block";
-        analysisResults.innerHTML = "";
-        analysisResults.append(ResponseComponent(analysisData));
+      if (analysisVisionResults) {
+        analysisVisionResults.style.display = "block";
+        analysisVisionResults.innerHTML = "";
+        analysisVisionResults.append(ResponseComponent(analysisVisionData));
       }
     } catch (error) {
       console.error("Analysis error:", error);
@@ -243,7 +280,3 @@ export async function updateHealthcheckStatusInterval() {
     await new Promise((resolve) => setTimeout(resolve, 60 * 1000 * 5));
   }
 }
-
-export const triggerAudioTranscription = () => {
-  console.log("triggerAudioTranscription");
-};
