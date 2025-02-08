@@ -1,7 +1,13 @@
 import "./style.css";
 import { updateHealthcheckStatusInterval } from "./setup.ts";
+
 import appDetails from "../package.json";
 import logo from "./assets/images/logo-no-bg.png";
+import { Footer } from "./components/Footer.ts";
+import { Status } from "./components/Status.ts";
+import { Header } from "./components/Header.ts";
+import { AudioExperiment } from "./components/AudioExperiment.ts";
+import { VideoExperiment } from "./components/VideoExperiment.ts";
 
 const uploadProgressModal = `<div
         class="modal fade"
@@ -78,40 +84,13 @@ const uploadComponent = `
   </div>
   ${uploadProgressModal}`;
 
-const headerComponent = `<header>
-  <img src='${logo}' alt='FreePrompt' title='FreePrompt' class='logo'  />
-  <h2>Totally Free image classification with and LLM API integration</h2>            
-</header>`;
-
-const statusComponent = `<div>
-    <span class="text-muted">Status: </span>
-    <span id="healthcheck-status">🔴</span>
-  </div>`;
-
-const footerComponent = `<footer>
-  <div>
-    <p>Disclaimer: Images are not stored. All images are processed in real-time and deleted immediately after processing.</p>
-    <p><a href="https://github.com/glaucopater/freeprompt"><i class="fa-brands fa-github"></i> Github</a></p>
-    <p>Version ${appDetails.version}</p>
-  </div>
-</footer>`;
-
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div class="min-vh-100 d-flex flex-column">
-    ${headerComponent}    
-    <h5>Experiment 1: Image classification with Gen AI (Gemini)</h5>
-    <div class="container flex-grow-1 py-4">
-      <div class="row g-4">
-        <div class="col-12 col-lg-5">
-          ${uploadComponent}
-        </div>
-        <div class="col-12 col-lg-7">
-          <div id="analysis-results" style="display: none"></div>
-        </div>
-      </div>
-    </div>
-    ${statusComponent}   
-    ${footerComponent}
+    ${Header(logo)}    
+    ${VideoExperiment(uploadComponent)}
+    ${AudioExperiment()}
+    ${Status()}
+    ${Footer(appDetails)}
   </div>
 `;
 

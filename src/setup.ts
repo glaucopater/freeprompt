@@ -1,10 +1,8 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import { ResponseComponent } from "./components/ResponseComponent";
-import { parseResponseData } from "./utils";
+import { formatFileSize, parseResponseData } from "./utils";
 import { AnalysisData } from "./types";
-
-const FUNCTIONS_PATH = "/.netlify/functions";
-const MAX_FILE_SIZE = 1024 * 1024;
+import { FUNCTIONS_PATH, MAX_FILE_SIZE } from "./constants";
 
 /**
  * Set up all the event listeners for the page.
@@ -22,6 +20,7 @@ const MAX_FILE_SIZE = 1024 * 1024;
  */
 
 export const setupEvents = () => {
+  // region Upload Area
   const uploadArea: HTMLElement | null = document.getElementById("upload-area");
 
   const fileInput: HTMLInputElement | null = document.getElementById(
@@ -40,8 +39,9 @@ export const setupEvents = () => {
     "upload-form"
   ) as HTMLFormElement | null;
 
-  const analysisResults: HTMLElement | null =
-    document.getElementById("analysis-results");
+  const analysisResults: HTMLElement | null = document.getElementById(
+    "analysis-vision-results"
+  );
 
   uploadArea?.addEventListener("click", () => {
     fileInput?.click();
@@ -98,6 +98,23 @@ export const setupEvents = () => {
         analyzeFile(file as Blob);
       }
     });
+    // endregion Upload Area
+
+    // region audio
+
+    const triggerAudioTranscriptionButton = document.getElementById(
+      "trigger-audio-transcription-button"
+    ) as HTMLButtonElement | null;
+
+    triggerAudioTranscriptionButton?.addEventListener("click", () => {
+      fetch(`${FUNCTIONS_PATH}/gemini-hearing-upload`, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    });
+
+    // endregion audio
   }
 
   function handleFiles(files: FileList | null) {
@@ -194,11 +211,6 @@ export const setupEvents = () => {
       if (uploadButton) uploadButton.disabled = false;
     }
   }
-  function formatFileSize(size: number) {
-    if (size < 1024) return `${size} bytes`;
-    if (size < MAX_FILE_SIZE) return `${(size / 1024).toFixed(2)} KB`;
-    return `${(size / MAX_FILE_SIZE).toFixed(2)} MB`;
-  }
 };
 
 async function updateHealthcheckStatus() {
@@ -231,3 +243,7 @@ export async function updateHealthcheckStatusInterval() {
     await new Promise((resolve) => setTimeout(resolve, 60 * 1000 * 5));
   }
 }
+
+export const triggerAudioTranscription = () => {
+  console.log("triggerAudioTranscription");
+};
