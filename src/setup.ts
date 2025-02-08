@@ -116,37 +116,33 @@ export const setupEvents = () => {
     ) as HTMLButtonElement | null;
 
     triggerAudioTranscriptionButton?.addEventListener("click", async () => {
-      console.log("triggerAudioTranscriptionButton");
       const response = await fetch(`${FUNCTIONS_PATH}/gemini-hearing-upload`, {
         headers: {
           "Content-Type": "application/json",
         },
       });
 
-      /*
-      if (response.status === 429) {
-        console.log("Too many requests");
-        return;
-      } else if (response.status === 500) {
-        console.log("Internal Server Error");
-        return;
-      } else if (response.status === 200) {
-        console.log("Success");
-      }
-    */
-      {
-        const data = await response.json();
-        const analysisAudioData = data.message;
-        console.log("Raw Response:", data.message);
+      const data = await response.json();
+      const analysisAudioData = data.message;
+      console.log("Raw Response:", data.message);
 
-        if (analysisAudioResults) {
-          analysisAudioResults.style.display = "block";
-          analysisAudioResults.innerHTML = "";
-          analysisAudioResults.append(
-            parseAudioResponseData(analysisAudioData)
-          );
-        }
+      if (analysisAudioResults) {
+        analysisAudioResults.style.display = "block";
+        analysisAudioResults.innerHTML = "";
+        analysisAudioResults.append(parseAudioResponseData(analysisAudioData));
       }
+
+      const responseList = await fetch(
+        `${FUNCTIONS_PATH}/gemini-list-uploaded`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const listData = await responseList.json();
+      console.log("Raw Response List:", listData.files);
     });
 
     // endregion audio
