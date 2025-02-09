@@ -1,10 +1,15 @@
 import "bootstrap/dist/css/bootstrap.min.css";
-import { ResponseComponent } from "./components/ResponseComponent";
-import { parseResponseData } from "./utils";
-import { AnalysisData } from "./types";
-
-const FUNCTIONS_PATH = "/.netlify/functions";
-const MAX_FILE_SIZE = 1024 * 1024;
+import {
+  ResponseHearingComponent,
+  ResponseVisionComponent,
+} from "./components/ResponseComponent";
+import {
+  formatFileSize,
+  parseAudioResponseData,
+  parseVisionResponseData,
+} from "./utils";
+import { AnalysisVisionData } from "./types";
+import { FUNCTIONS_PATH, MAX_FILE_SIZE } from "./constants";
 
 /**
  * Set up all the event listeners for the page.
@@ -22,7 +27,9 @@ const MAX_FILE_SIZE = 1024 * 1024;
  */
 
 export const setupEvents = () => {
-  const uploadArea: HTMLElement | null = document.getElementById("upload-area");
+  // region Upload Area
+  const uploadImageArea: HTMLElement | null =
+    document.getElementById("upload-area");
 
   const fileInput: HTMLInputElement | null = document.getElementById(
     "file-input"
@@ -40,29 +47,34 @@ export const setupEvents = () => {
     "upload-form"
   ) as HTMLFormElement | null;
 
-  const analysisResults: HTMLElement | null =
-    document.getElementById("analysis-results");
+  const analysisVisionResults: HTMLElement | null = document.getElementById(
+    "analysis-vision-results"
+  );
 
-  uploadArea?.addEventListener("click", () => {
+  const analysisAudioResults: HTMLElement | null = document.getElementById(
+    "analysis-audio-results"
+  );
+
+  uploadImageArea?.addEventListener("click", () => {
     fileInput?.click();
   });
 
-  uploadArea?.addEventListener("dragover", (e) => {
+  uploadImageArea?.addEventListener("dragover", (e) => {
     e.preventDefault();
-    uploadArea?.classList.add("upload-area-dragover");
-    uploadArea?.classList.remove("upload-area-default");
+    uploadImageArea?.classList.add("upload-area-dragover");
+    uploadImageArea?.classList.remove("upload-area-default");
   });
 
-  uploadArea?.addEventListener("dragleave", () => {
-    uploadArea?.classList.add("upload-area-default");
-    uploadArea?.classList.remove("upload-area-dragover");
+  uploadImageArea?.addEventListener("dragleave", () => {
+    uploadImageArea?.classList.add("upload-area-default");
+    uploadImageArea?.classList.remove("upload-area-dragover");
   });
 
-  uploadArea?.addEventListener("drop", (e) => {
+  uploadImageArea?.addEventListener("drop", (e) => {
     e.preventDefault();
     e.stopPropagation();
-    uploadArea?.classList.add("upload-area-default");
-    uploadArea?.classList.remove("upload-area-dragover");
+    uploadImageArea?.classList.add("upload-area-default");
+    uploadImageArea?.classList.remove("upload-area-dragover");
 
     const dt = e.dataTransfer;
     if (dt?.files && dt.files.length > 0) {
@@ -74,7 +86,7 @@ export const setupEvents = () => {
 
       if (fileInput) {
         fileInput.files = dataTransfer.files;
-        handleFiles(dataTransfer.files);
+        handleImageFiles(dataTransfer.files);
       }
     }
   });
@@ -82,7 +94,7 @@ export const setupEvents = () => {
   fileInput?.addEventListener("change", (e) => {
     const input = e.target as HTMLInputElement;
     if (input.files) {
-      handleFiles(input.files);
+      handleImageFiles(input.files);
     }
   });
 
@@ -98,29 +110,79 @@ export const setupEvents = () => {
         analyzeFile(file as Blob);
       }
     });
+    // endregion Upload Area
+
+    // region audio
+
+    const triggerAudioTranscriptionButton = document.getElementById(
+      "trigger-audio-transcription-button"
+    ) as HTMLButtonElement | null;
+
+    triggerAudioTranscriptionButton?.addEventListener("click", async () => {
+      const response = await fetch(`${FUNCTIONS_PATH}/gemini-hearing-upload`, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+      const analysisAudioData = data.message;
+      console.log("Raw Response:", data.message);
+
+      if (analysisAudioResults) {
+        analysisAudioResults.style.display = "block";
+        analysisAudioResults.innerHTML = "";
+        analysisAudioResults.append(parseAudioResponseData(analysisAudioData));
+      }
+
+      const responseList = await fetch(
+        `${FUNCTIONS_PATH}/gemini-list-uploaded`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const listData = await responseList.json();
+      console.log("Raw Response List:", listData.files);
+    });
+
+    // endregion audio
   }
 
-  function handleFiles(files: FileList | null) {
+  function handleImageFiles(files: FileList | null) {
     if (!files?.length) return;
 
     const file = files[0];
     const imageExtensions = ["jpg", "jpeg", "png", "gif", "bmp"];
+    const audioExtensions = ["mp3", "wav", "ogg"];
+
+    const allowedExtensions = [...imageExtensions, ...audioExtensions];
+
     const fileExtension = file.name.split(".").pop()?.toLowerCase() || "";
     const imagePreview = document.getElementById(
       "image-preview"
     ) as HTMLImageElement;
+
+    const uploadGuide = document.getElementById("upload-guide") as HTMLElement;
+
     const autoUploadSwitch = document.getElementById(
       "auto-upload-switch"
     ) as HTMLInputElement;
 
     if (
-      imageExtensions.includes(fileExtension) ||
-      file.type.startsWith("image/")
+      allowedExtensions.includes(fileExtension) ||
+      file.type.startsWith("image/") ||
+      file.type.startsWith("audio/")
     ) {
       if (file.size > MAX_FILE_SIZE) {
         fileInfo!.textContent = "File size exceeds 1MB";
         uploadButton!.disabled = true;
-        imagePreview.classList.add("d-none");
+        if (imageExtensions.includes(fileExtension)) {
+          imagePreview.classList.add("d-none");
+          uploadGuide.classList.add("d-none");
+        }
       } else {
         fileInfo!.textContent = `File: ${file.name} (${formatFileSize(
           file.size
@@ -128,14 +190,21 @@ export const setupEvents = () => {
         uploadButton!.disabled = false;
 
         // Show image preview
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          if (imagePreview && e.target?.result) {
-            imagePreview.src = e.target.result as string;
-            imagePreview.classList.remove("d-none");
-          }
-        };
-        reader.readAsDataURL(file);
+
+        if (imageExtensions.includes(fileExtension)) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            if (imagePreview && e.target?.result) {
+              imagePreview.src = e.target.result as string;
+              imagePreview.classList.remove("d-none");
+
+              if (uploadGuide) {
+                uploadGuide.classList.add("d-none");
+              }
+            }
+          };
+          reader.readAsDataURL(file);
+        }
 
         // Auto upload if enabled
         if (autoUploadSwitch?.checked) {
@@ -143,9 +212,15 @@ export const setupEvents = () => {
         }
       }
     } else {
-      fileInfo!.textContent = "Only image files are allowed";
+      fileInfo!.textContent = "Only image or audio files are allowed";
       uploadButton!.disabled = true;
-      imagePreview.classList.add("d-none");
+
+      if (imageExtensions.includes(fileExtension)) {
+        imagePreview.classList.add("d-none");
+        if (uploadGuide) {
+          uploadGuide.classList.remove("d-none");
+        }
+      }
     }
   }
 
@@ -156,6 +231,8 @@ export const setupEvents = () => {
     try {
       const reader = new FileReader();
       reader.readAsDataURL(file);
+
+      console.log(file.type);
 
       const base64 = await new Promise<string>((resolve, reject) => {
         reader.onload = () => {
@@ -168,36 +245,62 @@ export const setupEvents = () => {
         reader.onerror = () => reject(reader.error);
       });
 
-      const response = await fetch(`${FUNCTIONS_PATH}/gemini-vision-upload`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ data: base64 }),
-      });
+      if (file.type.startsWith("image/")) {
+        const response = await fetch(`${FUNCTIONS_PATH}/gemini-vision-upload`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ data: base64 }),
+        });
 
-      const data = await response.json();
-      const analysisData: AnalysisData = parseResponseData(data.message);
-      console.log("Raw Response:", data.message);
+        const data = await response.json();
+        const analysisVisionData: AnalysisVisionData = parseVisionResponseData(
+          data.message
+        );
+        console.log("Raw Video Response:", data.message);
 
-      if (analysisResults) {
-        analysisResults.style.display = "block";
-        analysisResults.innerHTML = "";
-        analysisResults.append(ResponseComponent(analysisData));
+        if (analysisVisionResults) {
+          analysisVisionResults.style.display = "block";
+          analysisVisionResults.innerHTML = "";
+          analysisVisionResults.append(
+            ResponseVisionComponent(analysisVisionData)
+          );
+        }
+      } else if (file.type.startsWith("audio/")) {
+        const response = await fetch(
+          `${FUNCTIONS_PATH}/gemini-hearing-upload`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ data: base64 }),
+          }
+        );
+
+        const data = await response.json();
+        console.log("Raw Audio Response:", data.message);
+        const analysisAudioData = parseAudioResponseData(data.message);
+
+        if (analysisAudioResults) {
+          analysisAudioResults.style.display = "block";
+          analysisAudioResults.innerHTML = "";
+          analysisAudioResults.append(
+            ResponseHearingComponent({
+              description: analysisAudioData,
+            })
+          );
+        }
       }
     } catch (error) {
       console.error("Analysis error:", error);
       if (fileInfo)
-        fileInfo.textContent = "Error analyzing image. Please try again.";
+        fileInfo.textContent = "Error analyzing file. Please try again.";
     } finally {
       if (spinner) spinner.style.display = "none";
       if (uploadButton) uploadButton.disabled = false;
     }
-  }
-  function formatFileSize(size: number) {
-    if (size < 1024) return `${size} bytes`;
-    if (size < MAX_FILE_SIZE) return `${(size / 1024).toFixed(2)} KB`;
-    return `${(size / MAX_FILE_SIZE).toFixed(2)} MB`;
   }
 };
 

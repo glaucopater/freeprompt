@@ -1,13 +1,12 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Handler } from "@netlify/functions";
 import * as dotenv from "dotenv";
-import { VISION_PROMPTS } from "./prompts";
+import { AUDIO_PROMPTS } from "./prompts";
 import { GEMINI_MODELS } from "./models";
-
+// Make sure to include these imports:
 dotenv.config();
 
 const GOOGLE_API_KEY = process.env.NETLIFY_GOOGLE_API_KEY;
-const DEFAULT_MODEL = GEMINI_MODELS[2];
 
 export const handler: Handler = async (event) => {
   if (!GOOGLE_API_KEY) {
@@ -23,20 +22,26 @@ export const handler: Handler = async (event) => {
     };
   }
 
-  const genAI = new GoogleGenerativeAI(GOOGLE_API_KEY);
-  const model = genAI.getGenerativeModel({ model: DEFAULT_MODEL });
+  // #region inline upload
 
   if (event.body) {
     const { data } = JSON.parse(event.body);
     const imageResp = Buffer.from(data, "base64");
+    const genAI = new GoogleGenerativeAI(GOOGLE_API_KEY);
+
+    // Initialize a Gemini model appropriate for your use case.
+    const model = genAI.getGenerativeModel({
+      model: GEMINI_MODELS[2],
+    });
+
     const result = await model.generateContent([
       {
         inlineData: {
-          data: Buffer.from(imageResp).toString("base64"),
-          mimeType: "image/jpeg",
+          data: imageResp.toString("base64"),
+          mimeType: "audio/mp3",
         },
       },
-      VISION_PROMPTS[0],
+      AUDIO_PROMPTS[0],
     ]);
 
     return {
@@ -50,10 +55,12 @@ export const handler: Handler = async (event) => {
     };
   }
 
+  //  #endregion
+
   return {
-    statusCode: 400,
+    statusCode: 401,
     body: JSON.stringify({
-      error: "No image data provided",
+      message: "Audio processing failed.",
     }),
     headers: {
       "Content-Type": "application/json",
