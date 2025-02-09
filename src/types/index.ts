@@ -3,3 +3,7 @@ export interface AnalysisVisionData {
   categories: string[];
   palette: string[];
 }
+
+export interface AnalysisHearingData {
+  description: string;
+}

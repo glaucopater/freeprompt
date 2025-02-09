@@ -1,4 +1,4 @@
-import { AnalysisVisionData } from "../../types";
+import { AnalysisHearingData, AnalysisVisionData } from "../../types";
 import { ColorSwatch } from "../ColorSwatch";
 import { SectionTitle } from "../SectionTitle";
 
@@ -9,11 +9,11 @@ export const updateVisionAnalysisData = (data: AnalysisVisionData) => {
   if (resultsContainer) {
     resultsContainer.style.display = "block";
     resultsContainer.innerHTML = "";
-    resultsContainer.append(ResponseComponent(data));
+    resultsContainer.append(ResponseVisionComponent(data));
   }
 };
 
-export function ResponseComponent(
+export function ResponseVisionComponent(
   analysisData: AnalysisVisionData
 ): HTMLDivElement {
   const container = document.createElement("div");
@@ -74,6 +74,32 @@ export function ResponseComponent(
 
   // Combine all sections
   container.append(descriptionSection, categoriesSection, paletteSection);
+
+  return container;
+}
+
+export function ResponseHearingComponent(
+  analysisData: AnalysisHearingData
+): HTMLDivElement {
+  const container = document.createElement("div");
+  container.id = "response-component";
+  container.className = "d-flex flex-column gap-3";
+
+  // Description Section
+  const descriptionSection = document.createElement("div");
+  descriptionSection.className = "bg-white rounded-3 p-4";
+  const descriptionBody = document.createElement("div");
+  descriptionBody.className = "";
+  descriptionBody.append(SectionTitle("image-plus", "Description"));
+
+  const description = document.createElement("p");
+  description.className = "text-secondary mb-0 text-justify";
+  description.style.textAlign = "justify";
+  description.textContent = analysisData.description;
+  descriptionBody.append(description);
+  descriptionSection.append(descriptionBody);
+
+  container.append(descriptionSection);
 
   return container;
 }

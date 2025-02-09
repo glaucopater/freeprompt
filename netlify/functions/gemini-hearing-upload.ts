@@ -1,23 +1,14 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Handler } from "@netlify/functions";
 import * as dotenv from "dotenv";
-import { GEMINI_MODELS } from "./models";
-import { FileState, GoogleAIFileManager } from "@google/generative-ai/server";
 import { AUDIO_PROMPTS } from "./prompts";
-import { AUDIO_FILES } from "../../src/constants";
+import { GEMINI_MODELS } from "./models";
 // Make sure to include these imports:
-// import { GoogleAIFileManager, FileState } from "@google/generative-ai/server";
-// import { GoogleGenerativeAI } from "@google/generative-ai";
 dotenv.config();
 
 const GOOGLE_API_KEY = process.env.NETLIFY_GOOGLE_API_KEY;
-const DEFAULT_MODEL = GEMINI_MODELS[0]; // Default to the first model
-
-const mediaPath = "./src/assets/media";
 
 export const handler: Handler = async (event) => {
-  console.log("event", event);
-
   if (!GOOGLE_API_KEY) {
     return {
       statusCode: 500,
@@ -31,54 +22,45 @@ export const handler: Handler = async (event) => {
     };
   }
 
-  // #region
+  // #region inline upload
 
-  const fileManager = new GoogleAIFileManager(GOOGLE_API_KEY);
+  if (event.body) {
+    const { data } = JSON.parse(event.body);
+    const imageResp = Buffer.from(data, "base64");
+    const genAI = new GoogleGenerativeAI(GOOGLE_API_KEY);
 
-  const uploadResult = await fileManager.uploadFile(
-    `${mediaPath}/${AUDIO_FILES[1]}`,
-    {
-      mimeType: "audio/mp3",
-      displayName: "Audio sample",
-    }
-  );
+    // Initialize a Gemini model appropriate for your use case.
+    const model = genAI.getGenerativeModel({
+      model: GEMINI_MODELS[2],
+    });
 
-  let file = await fileManager.getFile(uploadResult.file.name);
-  while (file.state === FileState.PROCESSING) {
-    process.stdout.write(".");
-    // Sleep for 10 seconds
-    await new Promise((resolve) => setTimeout(resolve, 10_000));
-    // Fetch the file from the API again
-    file = await fileManager.getFile(uploadResult.file.name);
-  }
-
-  if (file.state === FileState.FAILED) {
-    throw new Error("Audio processing failed.");
-  }
-
-  // View the response.
-  console.log(
-    `Uploaded file ${uploadResult.file.displayName} as: ${uploadResult.file.uri}`
-  );
-
-  const genAI = new GoogleGenerativeAI(GOOGLE_API_KEY);
-  const model = genAI.getGenerativeModel({ model: DEFAULT_MODEL });
-  const result = await model.generateContent([
-    AUDIO_PROMPTS[0],
-    {
-      fileData: {
-        fileUri: uploadResult.file.uri,
-        mimeType: uploadResult.file.mimeType,
+    const result = await model.generateContent([
+      {
+        inlineData: {
+          data: imageResp.toString("base64"),
+          mimeType: "audio/mp3",
+        },
       },
-    },
-  ]);
+      AUDIO_PROMPTS[0],
+    ]);
 
-  // #endregion
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        message: result.response.text(),
+      }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    };
+  }
+
+  //  #endregion
 
   return {
-    statusCode: 200,
+    statusCode: 401,
     body: JSON.stringify({
-      message: result.response.text(),
+      message: "Audio processing failed.",
     }),
     headers: {
       "Content-Type": "application/json",

@@ -2,7 +2,9 @@ import { MAX_FILE_SIZE } from "../constants";
 import { AnalysisVisionData } from "../types";
 
 export const parseVisionResponseData = (data: string) => {
-  const [description, categories, palette] = data.split("\n\n");
+  // replace multiple times "\n\n" with "\n"
+  const filteredData = data.replace(/\n+/g, "\n");
+  const [description, categories, palette] = filteredData.split("\n");
 
   const responseData = {
     description,

@@ -2,11 +2,12 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Handler } from "@netlify/functions";
 import * as dotenv from "dotenv";
 import { VISION_PROMPTS } from "./prompts";
+import { GEMINI_MODELS } from "./models";
 
 dotenv.config();
 
 const GOOGLE_API_KEY = process.env.NETLIFY_GOOGLE_API_KEY;
-const DEFAULT_MODEL = "models/gemini-1.5-pro";
+const DEFAULT_MODEL = GEMINI_MODELS[2];
 
 export const handler: Handler = async (event) => {
   if (!GOOGLE_API_KEY) {
