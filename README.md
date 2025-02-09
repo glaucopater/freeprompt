@@ -18,7 +18,7 @@ Because compared to other LLMs in the market, it still provides API access witho
 The implementation is totally TypeScript-based. To have secure access to the API, a [BFF](https://en.wikipedia.org/wiki/Frontend_and_backend#Software_definitions) adopting Netlify serverless functions is used.
 Why Netlify and their serverless functions? Because again, they are free and easy to set up.
 
-![Image Processing Architecture](doc/sequence-diagram.png)
+![File Processing Architecture](doc/sequence-diagram.png)
 
 ## Requirements 📋
 
