@@ -177,7 +177,7 @@ export const setupEvents = () => {
       file.type.startsWith("audio/")
     ) {
       if (file.size > MAX_FILE_SIZE) {
-        fileInfo!.textContent = "File size exceeds 1MB";
+        fileInfo!.textContent = `File size exceeds ${MAX_FILE_SIZE} bytes`;
         uploadButton!.disabled = true;
         if (imageExtensions.includes(fileExtension)) {
           imagePreview.classList.add("d-none");

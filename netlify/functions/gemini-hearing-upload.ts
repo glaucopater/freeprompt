@@ -41,7 +41,7 @@ export const handler: Handler = async (event) => {
           mimeType: "audio/mp3",
         },
       },
-      AUDIO_PROMPTS[0],
+      AUDIO_PROMPTS[1],
     ]);
 
     return {
