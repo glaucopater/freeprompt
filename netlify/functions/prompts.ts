@@ -4,5 +4,5 @@ export const VISION_PROMPTS = [
 
 export const AUDIO_PROMPTS = [
   "Generate a transcript of this speech.",
-  "Generate a transcript of this speech and give me also the language used.",
+  "Generate a transcript of this speech and give me also the language used. If the language is not english provide a translation  Examples of transcript:'**Transcript:** 'สวัสดีค่ะ วันนี้เราออกมา กินข้าว'. **Language:** Thai **Translation:** 'Hello, today we are going out to eat.'",
 ];
