@@ -16,9 +16,25 @@ export const parseVisionResponseData = (data: string) => {
 };
 
 export const parseAudioResponseData = (data: string) => {
-  const responseData = data.replace("\n\n", "");
+  const responseData = data.replace(/\n+/g, "\n");
 
-  return responseData;
+  const parsedItems = responseData.split("\n");
+
+  if (parsedItems.length < 3) {
+    console.warn("Error parsing audio response data");
+
+    return {
+      transcript: parsedItems[0] || "",
+      language: "English",
+      translation: "",
+    };
+  }
+
+  const [_init, transcript, language, translation] = parsedItems;
+
+  console.log("Parsed Items:", parsedItems, transcript, language, translation);
+
+  return { transcript, language, translation };
 };
 
 export function formatFileSize(size: number) {

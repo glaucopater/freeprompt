@@ -95,7 +95,7 @@ export function ResponseHearingComponent(
   const description = document.createElement("p");
   description.className = "text-secondary mb-0 text-justify";
   description.style.textAlign = "justify";
-  description.textContent = analysisData.description;
+  description.textContent = analysisData.transcript;
   descriptionBody.append(description);
   descriptionSection.append(descriptionBody);
 

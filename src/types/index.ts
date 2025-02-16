@@ -5,5 +5,7 @@ export interface AnalysisVisionData {
 }
 
 export interface AnalysisHearingData {
-  description: string;
+  transcript: string;
+  language: string;
+  translation: string;
 }

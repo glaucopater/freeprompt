@@ -1,8 +1,5 @@
 import "bootstrap/dist/css/bootstrap.min.css";
-import {
-  ResponseHearingComponent,
-  ResponseVisionComponent,
-} from "./components/ResponseComponent";
+import { ResponseHearingComponent } from "./components/ResponseHearingComponent";
 import {
   convertWebPToPNGBase64,
   formatFileSize,
@@ -11,6 +8,7 @@ import {
 } from "./utils";
 import { AnalysisVisionData } from "./types";
 import { FUNCTIONS_PATH, MAX_FILE_SIZE } from "./constants";
+import { ResponseVisionComponent } from "./components/ResponseVisionComponent";
 
 /**
  * Set up all the event listeners for the page.
@@ -133,7 +131,9 @@ export const setupEvents = () => {
       if (analysisAudioResults) {
         analysisAudioResults.style.display = "block";
         analysisAudioResults.innerHTML = "";
-        analysisAudioResults.append(parseAudioResponseData(analysisAudioData));
+        const parsedData = parseAudioResponseData(analysisAudioData);
+        console.log("Parsed Data:", parsedData);
+        analysisAudioResults.append(Object.entries(parsedData).join("\n"));
       }
 
       const responseList = await fetch(
@@ -295,7 +295,9 @@ export const setupEvents = () => {
           analysisAudioResults.innerHTML = "";
           analysisAudioResults.append(
             ResponseHearingComponent({
-              description: analysisAudioData,
+              transcript: analysisAudioData.transcript,
+              language: analysisAudioData.language,
+              translation: analysisAudioData.translation,
             })
           );
         }
