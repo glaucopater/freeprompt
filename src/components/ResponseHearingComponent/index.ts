@@ -4,8 +4,6 @@ import { SectionTitle } from "../SectionTitle";
 export function ResponseHearingComponent(
   analysisData: AnalysisHearingData
 ): HTMLDivElement {
-  console.log("Raw Analysis Data:", analysisData);
-
   const container = document.createElement("div");
   container.id = "response-component";
   container.className = "d-flex flex-column gap-3";

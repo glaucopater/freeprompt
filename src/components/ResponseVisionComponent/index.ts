@@ -3,8 +3,6 @@ import { ColorSwatch } from "../ColorSwatch";
 import { SectionTitle } from "../SectionTitle";
 
 export const updateVisionAnalysisData = (data: AnalysisVisionData) => {
-  console.log("Raw Analysis Data:", data);
-
   const resultsContainer = document.getElementById("analysis-vision-results");
   if (resultsContainer) {
     resultsContainer.style.display = "block";
