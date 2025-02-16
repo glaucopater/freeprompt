@@ -15,12 +15,18 @@ export function ResponseHearingComponent(
   descriptionSection.className = "bg-white rounded-3 p-4";
   const descriptionBody = document.createElement("div");
   descriptionBody.className = "";
-  descriptionBody.append(SectionTitle("image-plus", "Description"));
+  descriptionBody.append(SectionTitle("image-plus", "Transcription"));
 
   const description = document.createElement("p");
   description.className = "text-secondary mb-0 text-justify";
   description.style.textAlign = "justify";
-  description.textContent = analysisData.transcript;
+  description.style.whiteSpace = "pre-line";
+
+  description.textContent = [
+    analysisData.transcript,
+    analysisData.language,
+    analysisData.translation,
+  ].join("\r\n");
   descriptionBody.append(description);
   descriptionSection.append(descriptionBody);
 

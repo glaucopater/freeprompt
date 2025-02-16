@@ -8,7 +8,8 @@ const mockVisionResponseData = [
 ];
 
 const mockHearingResponseData = [
-  "Okay, here's the information you requested:\n\n**Transcript:** สวัสดีค่ะ วันนี้เราออกมา กินข้าว\n\n**Language:** Thai\n\n**Translation:** Hello, today we are going out to eat.\n",
+  "**Transcript:** สวัสดีค่ะ วันนี้เราออกมา กินข้าว\n**Language:** Thai\n**Translation:** Hello, today we are out eating.\n",
+  "**Transcript:** If the Porsche Macan has proven anything, it's that the days of sacrificing performance for practicality are gone. Long gone. Engineered to deliver a driving experience like no other, the Macan has demonstrated excellence in style and performance to become the leading sports car in its class. So don't let those five doors fool you. Once you're in the driver's seat, one thing will become immediately clear. This is a Porsche. The Macan, now leasing from 3.99%. Conditions apply.\n\n**Language:** English",
 ];
 
 describe("parseVisionResponseData", () => {
@@ -58,7 +59,7 @@ describe("parseHearingResponseData", () => {
     );
     expect(language).toEqual("**Language:** Thai");
     expect(translation).toEqual(
-      "**Translation:** Hello, today we are going out to eat."
+      "**Translation:** Hello, today we are out eating."
     );
   });
 });

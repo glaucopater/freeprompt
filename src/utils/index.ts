@@ -25,12 +25,12 @@ export const parseAudioResponseData = (data: string) => {
 
     return {
       transcript: parsedItems[0] || "",
-      language: "English",
+      language: "**English**",
       translation: "",
     };
   }
 
-  const [_init, transcript, language, translation] = parsedItems;
+  const [transcript, language, translation] = parsedItems;
 
   console.log("Parsed Items:", parsedItems, transcript, language, translation);
 
