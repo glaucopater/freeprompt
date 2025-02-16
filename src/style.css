@@ -205,5 +205,6 @@ footer p {
 @media (max-width: 768px) {
   body {
     margin: 0;
+    width: 640px;
   }
 }

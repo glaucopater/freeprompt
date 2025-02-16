@@ -4,6 +4,7 @@ import {
   ResponseVisionComponent,
 } from "./components/ResponseComponent";
 import {
+  convertWebPToPNGBase64,
   formatFileSize,
   parseAudioResponseData,
   parseVisionResponseData,
@@ -155,8 +156,8 @@ export const setupEvents = () => {
     if (!files?.length) return;
 
     const file = files[0];
-    const imageExtensions = ["jpg", "jpeg", "png", "gif", "bmp"];
-    const audioExtensions = ["mp3", "wav", "ogg"];
+    const imageExtensions = ["jpg", "jpeg", "png", "gif", "bmp", "webp"];
+    const audioExtensions = ["mp3", "wav", "ogg", "flac", "m4a", "aac"];
 
     const allowedExtensions = [...imageExtensions, ...audioExtensions];
 
@@ -193,9 +194,17 @@ export const setupEvents = () => {
 
         if (imageExtensions.includes(fileExtension)) {
           const reader = new FileReader();
-          reader.onload = (e) => {
+          reader.onload = async (e) => {
             if (imagePreview && e.target?.result) {
-              imagePreview.src = e.target.result as string;
+              if (file.type === "image/webp") {
+                const pngBase64 = await convertWebPToPNGBase64(
+                  e.target.result as string
+                );
+                imagePreview.src = pngBase64 as string;
+              } else {
+                imagePreview.src = e.target.result as string;
+              }
+
               imagePreview.classList.remove("d-none");
 
               if (uploadGuide) {
@@ -231,8 +240,6 @@ export const setupEvents = () => {
     try {
       const reader = new FileReader();
       reader.readAsDataURL(file);
-
-      console.log(file.type);
 
       const base64 = await new Promise<string>((resolve, reject) => {
         reader.onload = () => {
