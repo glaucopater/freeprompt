@@ -27,7 +27,7 @@ export default defineConfig(({ mode }) => {
          * If you want to store `index.html` in the specified folder, you can modify it, otherwise no configuration is required
          * @default index.html
          */
-        template: "public/index.html",
+        template: "index.html",
 
         /**
          * Data that needs to be injected into the index.html ejs template
