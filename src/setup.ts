@@ -1,15 +1,14 @@
 import "bootstrap/dist/css/bootstrap.min.css";
+import { ResponseHearingComponent } from "./components/ResponseHearingComponent";
 import {
-  ResponseHearingComponent,
-  ResponseVisionComponent,
-} from "./components/ResponseComponent";
-import {
+  convertWebPToPNGBase64,
   formatFileSize,
   parseAudioResponseData,
   parseVisionResponseData,
 } from "./utils";
 import { AnalysisVisionData } from "./types";
 import { FUNCTIONS_PATH, MAX_FILE_SIZE } from "./constants";
+import { ResponseVisionComponent } from "./components/ResponseVisionComponent";
 
 /**
  * Set up all the event listeners for the page.
@@ -132,7 +131,9 @@ export const setupEvents = () => {
       if (analysisAudioResults) {
         analysisAudioResults.style.display = "block";
         analysisAudioResults.innerHTML = "";
-        analysisAudioResults.append(parseAudioResponseData(analysisAudioData));
+        const parsedData = parseAudioResponseData(analysisAudioData);
+        console.log("Parsed Data:", parsedData);
+        analysisAudioResults.append(Object.entries(parsedData).join("\n"));
       }
 
       const responseList = await fetch(
@@ -155,8 +156,8 @@ export const setupEvents = () => {
     if (!files?.length) return;
 
     const file = files[0];
-    const imageExtensions = ["jpg", "jpeg", "png", "gif", "bmp"];
-    const audioExtensions = ["mp3", "wav", "ogg"];
+    const imageExtensions = ["jpg", "jpeg", "png", "gif", "bmp", "webp"];
+    const audioExtensions = ["mp3", "wav", "ogg", "flac", "m4a", "aac"];
 
     const allowedExtensions = [...imageExtensions, ...audioExtensions];
 
@@ -193,9 +194,17 @@ export const setupEvents = () => {
 
         if (imageExtensions.includes(fileExtension)) {
           const reader = new FileReader();
-          reader.onload = (e) => {
+          reader.onload = async (e) => {
             if (imagePreview && e.target?.result) {
-              imagePreview.src = e.target.result as string;
+              if (file.type === "image/webp") {
+                const pngBase64 = await convertWebPToPNGBase64(
+                  e.target.result as string
+                );
+                imagePreview.src = pngBase64 as string;
+              } else {
+                imagePreview.src = e.target.result as string;
+              }
+
               imagePreview.classList.remove("d-none");
 
               if (uploadGuide) {
@@ -231,8 +240,6 @@ export const setupEvents = () => {
     try {
       const reader = new FileReader();
       reader.readAsDataURL(file);
-
-      console.log(file.type);
 
       const base64 = await new Promise<string>((resolve, reject) => {
         reader.onload = () => {
@@ -288,7 +295,9 @@ export const setupEvents = () => {
           analysisAudioResults.innerHTML = "";
           analysisAudioResults.append(
             ResponseHearingComponent({
-              description: analysisAudioData,
+              transcript: analysisAudioData.transcript,
+              language: analysisAudioData.language,
+              translation: analysisAudioData.translation,
             })
           );
         }

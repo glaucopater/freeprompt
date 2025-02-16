@@ -3,8 +3,6 @@ import { ColorSwatch } from "../ColorSwatch";
 import { SectionTitle } from "../SectionTitle";
 
 export const updateVisionAnalysisData = (data: AnalysisVisionData) => {
-  console.log("Raw Analysis Data:", data);
-
   const resultsContainer = document.getElementById("analysis-vision-results");
   if (resultsContainer) {
     resultsContainer.style.display = "block";
@@ -95,7 +93,7 @@ export function ResponseHearingComponent(
   const description = document.createElement("p");
   description.className = "text-secondary mb-0 text-justify";
   description.style.textAlign = "justify";
-  description.textContent = analysisData.description;
+  description.textContent = analysisData.transcript;
   descriptionBody.append(description);
   descriptionSection.append(descriptionBody);
 
