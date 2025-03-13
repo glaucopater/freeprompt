@@ -10,7 +10,7 @@ A hassle-free setup to test LLM API for free
 
 Is it possible to upload a file (limited to 1MB in size) and get a classification of it. The prompt adopts [few-shots technique](https://www.promptingguide.ai/techniques/fewshot).
 
-![Previes](doc/preview.png)
+![Preview](doc/preview.png)
 
 ## Why Gemini AI? 🤖
 Because compared to other LLMs in the market, it still provides API access without any payment method setup. There are naturally limitations, but if you want to start testing GenAI API integration, this is a possible method.

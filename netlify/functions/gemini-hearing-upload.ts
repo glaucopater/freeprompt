@@ -9,6 +9,13 @@ dotenv.config();
 const GOOGLE_API_KEY = process.env.NETLIFY_GOOGLE_API_KEY;
 
 export const handler: Handler = async (event) => {
+  const headers = {
+    "Access-Control-Allow-Origin": "*", // Allow any origin
+    "Access-Control-Allow-Headers": "Content-Type", // Allow the Content-Type header
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS", // Allow GET, POST, and OPTIONS methods
+    "Content-Type": "application/json",
+  };
+
   if (!GOOGLE_API_KEY) {
     return {
       statusCode: 500,
@@ -16,12 +23,18 @@ export const handler: Handler = async (event) => {
         error:
           "API key not configured. Make sure you have a .env file with GOOGLE_API_KEY set.",
       }),
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
     };
   }
 
+  if (event.httpMethod === "OPTIONS") {
+    // Handle pre-flight request
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({ message: "Successful preflight call." }),
+    };
+  }
   // #region inline upload
 
   if (event.body) {
