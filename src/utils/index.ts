@@ -31,7 +31,7 @@ export const parseAudioResponseData = (data: string) => {
   }
 
   // to cover the case when the LLM is adding "Okay, here is the transcript, language, and translation:"...
-  if (parsedItems.length > 3) {
+  if (parsedItems.length > 3 && parsedItems[parsedItems.length - 1] !== "") {
     return {
       transcript: parsedItems[1],
       language: parsedItems[2],
@@ -40,8 +40,6 @@ export const parseAudioResponseData = (data: string) => {
   }
 
   const [transcript, language, translation] = parsedItems;
-
-  console.log("Parsed Items:", parsedItems, transcript, language, translation);
 
   return { transcript, language, translation };
 };
