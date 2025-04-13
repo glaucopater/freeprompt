@@ -1,6 +1,6 @@
 import { GEMINI_MODELS, DEFAULT_GEMINI_MODEL } from "../../netlify/functions/models";
 
-export const UploadFilesCard = (uploadProgressModal: string) => `
+export const UploadFilesCard = () => `
   <div class="card shadow-sm">
     <div class="card-body">      
       <form

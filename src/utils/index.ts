@@ -1,5 +1,5 @@
 import { MAX_FILE_SIZE } from "../constants";
-import { AnalysisVisionData, AnalysisHearingData } from "../types";
+import { AnalysisVisionData } from "../types";
 
 export const parseVisionResponseData = (data: string, metadata?: { processingTime: number, model: string }) => {
   // replace multiple times "\n\n" with "\n"

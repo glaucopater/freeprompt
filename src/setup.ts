@@ -9,20 +9,20 @@ import { FUNCTIONS_PATH, MAX_FILE_SIZE } from "./constants";
 import { ResponseVisionComponent } from "./components/ResponseVisionComponent";
 import { ResponseHearingComponent } from "./components/ResponseHearingComponent";
 
- /**
- * Set up all the event listeners for the page.
- *
- * Adds event listeners to the upload area, file input, upload button, and
- * form. These event listeners handle drag and drop events, file input
- * changes, form submissions, and modal close events.
- *
- * When a file is selected, it is analyzed by sending a POST request to the
- * Netlify function at /.netlify/functions/gemini-vision-upload. The function
- * returns a JSON object with a "message" property, which is displayed in the
- * modal.
- *
- * The modal is also cleared when it is closed.
- */
+/**
+* Set up all the event listeners for the page.
+*
+* Adds event listeners to the upload area, file input, upload button, and
+* form. These event listeners handle drag and drop events, file input
+* changes, form submissions, and modal close events.
+*
+* When a file is selected, it is analyzed by sending a POST request to the
+* Netlify function at /.netlify/functions/gemini-vision-upload. The function
+* returns a JSON object with a "message" property, which is displayed in the
+* modal.
+*
+* The modal is also cleared when it is closed.
+*/
 
 export const setupEvents = () => {
   // region Upload Area
@@ -48,9 +48,6 @@ export const setupEvents = () => {
     "upload-form"
   ) as HTMLFormElement | null;
 
-  const analysisVisionResults: HTMLElement | null = document.getElementById(
-    "analysis-vision-results"
-  );
 
   const analysisAudioResults: HTMLElement | null = document.getElementById(
     "analysis-audio-results"
@@ -74,13 +71,13 @@ export const setupEvents = () => {
     if (fileInput) fileInput.value = "";
     if (fileInfo) fileInfo.textContent = "";
     if (uploadButton) uploadButton.disabled = true;
-    
+
     // Reset image preview
     if (imagePreview) {
       imagePreview.src = "";
       imagePreview.classList.add("d-none");
     }
-    
+
     // Reset audio preview
     if (audioPreview) {
       audioPreview.src = "";
@@ -303,13 +300,13 @@ export const setupEvents = () => {
     const audioResultsContainer = document.getElementById("analysis-audio-results");
     const uploadColumn = document.getElementById("upload-column");
     const resultsColumn = document.getElementById("results-column");
-    
+
     // Hide both containers initially
     if (visionResultsContainer) visionResultsContainer.style.display = "none";
     if (audioResultsContainer) audioResultsContainer.style.display = "none";
 
     // Select the appropriate container based on file type
-    const resultsContainer = file.type.startsWith("image/") 
+    const resultsContainer = file.type.startsWith("image/")
       ? visionResultsContainer
       : audioResultsContainer;
 
@@ -328,10 +325,10 @@ export const setupEvents = () => {
       setTimeout(() => {
         resultsContainer.style.display = "block";
         resultsContainer.innerHTML = "";
-        resultsContainer.append(file.type.startsWith("image/") 
-          ? ResponseVisionComponent(null) 
+        resultsContainer.append(file.type.startsWith("image/")
+          ? ResponseVisionComponent(null)
           : ResponseHearingComponent(null));
-        
+
         // Trigger fade in
         setTimeout(() => {
           resultsContainer.classList.add("fade-in");
