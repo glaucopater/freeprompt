@@ -2,12 +2,11 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Handler } from "@netlify/functions";
 import * as dotenv from "dotenv";
 import { VISION_PROMPTS } from "./prompts";
-import { GEMINI_MODELS } from "./models";
+import { DEFAULT_GEMINI_MODEL } from "./models";
 
 dotenv.config();
-
 const GOOGLE_API_KEY = process.env.NETLIFY_GOOGLE_API_KEY;
-const DEFAULT_MODEL = GEMINI_MODELS[2];
+const DEFAULT_MODEL = DEFAULT_GEMINI_MODEL;
 
 export const handler: Handler = async (event) => {
   if (!GOOGLE_API_KEY) {
@@ -24,9 +23,11 @@ export const handler: Handler = async (event) => {
   }
 
   const genAI = new GoogleGenerativeAI(GOOGLE_API_KEY);
-  const model = genAI.getGenerativeModel({ model: DEFAULT_MODEL });
+  const selectedModel = event.body ? JSON.parse(event.body).model : DEFAULT_MODEL;
+  const model = genAI.getGenerativeModel({ model: selectedModel });
 
   if (event.body) {
+    const startTime = Date.now();
     const { data } = JSON.parse(event.body);
     const imageResp = Buffer.from(data, "base64");
     const result = await model.generateContent([
@@ -39,10 +40,18 @@ export const handler: Handler = async (event) => {
       VISION_PROMPTS[0],
     ]);
 
+    const endTime = Date.now();
+    const processingTime = endTime - startTime;
+
     return {
       statusCode: 200,
       body: JSON.stringify({
         message: result.response.text(),
+        metadata: {
+          processingTime,
+          timestamp: new Date().toISOString(),
+          model: selectedModel
+        }
       }),
       headers: {
         "Content-Type": "application/json",

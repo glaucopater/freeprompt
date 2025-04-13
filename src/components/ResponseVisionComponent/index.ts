@@ -12,18 +12,34 @@ export const updateVisionAnalysisData = (data: AnalysisVisionData) => {
 };
 
 export function ResponseVisionComponent(
-  analysisData: AnalysisVisionData
+  analysisData: AnalysisVisionData | null = null
 ): HTMLDivElement {
   const container = document.createElement("div");
   container.id = "response-component";
-  container.className = "d-flex flex-column gap-3";
+  container.className = "d-flex flex-column gap-3 h-100";
+
+  if (!analysisData) {
+    const loadingSection = document.createElement("div");
+    loadingSection.className = "card shadow-sm bg-white rounded-3 p-4 h-100";
+    const loadingBody = document.createElement("div");
+    loadingBody.className = "d-flex justify-content-center align-items-center h-100 py-4";
+    loadingBody.innerHTML = `
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    `;
+    loadingSection.append(loadingBody);
+    container.append(loadingSection);
+    container.dataset.startTime = Date.now().toString();
+    return container;
+  }
 
   // Description Section
   const descriptionSection = document.createElement("div");
-  descriptionSection.className = "bg-white rounded-3 p-4";
+  descriptionSection.className = "card shadow-sm bg-white rounded-3 p-4";
   const descriptionBody = document.createElement("div");
   descriptionBody.className = "";
-  descriptionBody.append(SectionTitle("image-plus", "Description"));
+  descriptionBody.append(SectionTitle("📝", "Description"));
 
   const description = document.createElement("p");
   description.className = "text-secondary mb-0 text-justify";
@@ -34,10 +50,10 @@ export function ResponseVisionComponent(
 
   // Categories Section
   const categoriesSection = document.createElement("div");
-  categoriesSection.className = "bg-white rounded-3 p-4";
+  categoriesSection.className = "card shadow-sm bg-white rounded-3 p-4";
   const categoriesBody = document.createElement("div");
   categoriesBody.className = "";
-  categoriesBody.append(SectionTitle("tags", "Categories"));
+  categoriesBody.append(SectionTitle("🏷️", "Categories"));
 
   const categoriesContainer = document.createElement("div");
   categoriesContainer.className = "d-flex flex-wrap gap-2";
@@ -55,13 +71,13 @@ export function ResponseVisionComponent(
 
   // Color Palette Section
   const paletteSection = document.createElement("div");
-  paletteSection.className = "bg-white rounded-3 p-4";
+  paletteSection.className = "card shadow-sm bg-white rounded-3 p-4";
   const paletteBody = document.createElement("div");
   paletteBody.className = "";
-  paletteBody.append(SectionTitle("palette", "Color Palette"));
+  paletteBody.append(SectionTitle("🎨", "Color Palette"));
 
   const paletteContainer = document.createElement("div");
-  paletteContainer.className = "d-flex gap-4";
+  paletteContainer.className = "d-flex gap-4 flex-wrap";
 
   analysisData.palette.forEach((color) => {
     paletteContainer.append(ColorSwatch(color));
@@ -70,34 +86,96 @@ export function ResponseVisionComponent(
   paletteBody.append(paletteContainer);
   paletteSection.append(paletteBody);
 
+  // Processing Time Section
+  const timeSection = document.createElement("div");
+  timeSection.className = "card shadow-sm bg-white rounded-3 p-4";
+  const timeBody = document.createElement("div");
+  timeBody.className = "";
+  timeBody.append(SectionTitle("⏱️", "Processing Time"));
+
+  const timeInfo = document.createElement("p");
+  timeInfo.className = "text-secondary mb-0 text-start";
+  timeInfo.innerHTML = `<strong>Time:</strong> ${(analysisData.processingTime / 1000).toFixed(3)} seconds<br><strong>Model:</strong> ${analysisData.model}`;
+  timeBody.append(timeInfo);
+  timeSection.append(timeBody);
+
   // Combine all sections
-  container.append(descriptionSection, categoriesSection, paletteSection);
+  container.append(descriptionSection, categoriesSection, paletteSection, timeSection);
 
   return container;
 }
 
 export function ResponseHearingComponent(
-  analysisData: AnalysisHearingData
+  analysisData: AnalysisHearingData | null
 ): HTMLDivElement {
   const container = document.createElement("div");
   container.id = "response-component";
-  container.className = "d-flex flex-column gap-3";
+  container.className = "d-flex flex-column gap-3 h-100";
 
-  // Description Section
-  const descriptionSection = document.createElement("div");
-  descriptionSection.className = "bg-white rounded-3 p-4";
-  const descriptionBody = document.createElement("div");
-  descriptionBody.className = "";
-  descriptionBody.append(SectionTitle("image-plus", "Description"));
+  if (!analysisData) {
+    const loadingSection = document.createElement("div");
+    loadingSection.className = "card shadow-sm bg-white rounded-3 p-4 h-100";
+    const loadingBody = document.createElement("div");
+    loadingBody.className = "d-flex justify-content-center align-items-center h-100 py-4";
+    loadingBody.innerHTML = `
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    `;
+    loadingSection.append(loadingBody);
+    container.append(loadingSection);
+    container.dataset.startTime = Date.now().toString();
+    return container;
+  }
 
-  const description = document.createElement("p");
-  description.className = "text-secondary mb-0 text-justify";
-  description.style.textAlign = "justify";
-  description.textContent = analysisData.transcript;
-  descriptionBody.append(description);
-  descriptionSection.append(descriptionBody);
+  // Transcript Section
+  const transcriptSection = document.createElement("div");
+  transcriptSection.className = "card shadow-sm bg-white rounded-3 p-4";
+  const transcriptBody = document.createElement("div");
+  transcriptBody.className = "";
+  transcriptBody.append(SectionTitle("🎤", "Transcript"));
 
-  container.append(descriptionSection);
+  const transcript = document.createElement("p");
+  transcript.className = "text-secondary mb-0 text-justify";
+  transcript.style.textAlign = "justify";
+  transcript.textContent = analysisData.transcript;
+  transcriptBody.append(transcript);
+  transcriptSection.append(transcriptBody);
+
+  // Language Section
+  const languageSection = document.createElement("div");
+  languageSection.className = "card shadow-sm bg-white rounded-3 p-4";
+  const languageBody = document.createElement("div");
+  languageBody.className = "";
+  languageBody.append(SectionTitle("🌐", "Language Details"));
+
+  const languageInfo = document.createElement("p");
+  languageInfo.className = "text-secondary mb-0";
+  languageInfo.innerHTML = `
+    <strong>Detected Language:</strong> ${analysisData.language}<br>
+    ${analysisData.translation ? `<strong>Translation:</strong> ${analysisData.translation}` : ''}
+  `;
+  languageBody.append(languageInfo);
+  languageSection.append(languageBody);
+
+  // Processing Time Section
+  const startTime = parseInt(container.dataset.startTime || Date.now().toString());
+  const processingTime = ((Date.now() - startTime) / 1000).toFixed(3);
+
+  const timeSection = document.createElement("div");
+  timeSection.className = "card shadow-sm bg-white rounded-3 p-4";
+  const timeBody = document.createElement("div");
+  timeBody.className = "";
+  timeBody.append(SectionTitle("⏱️", "Processing Time"));
+
+  const timeInfo = document.createElement("p");
+  timeInfo.className = "text-secondary mb-0";
+  timeInfo.innerHTML = `<strong>Time:</strong> ${processingTime} seconds`;
+  timeBody.append(timeInfo);
+  timeSection.append(timeBody);
+
+  // Combine all sections
+  container.append(transcriptSection, languageSection, timeSection);
 
   return container;
 }

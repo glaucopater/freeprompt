@@ -14,6 +14,7 @@ export const UploadFilesCard = (uploadProgressModal: string) => `
           <p class="file-info" id="file-info"></p>
           <input type="file" id="file-input" name="file" style="display: none" accept="image/*, audio/*" />
           <img id="image-preview" class="img-fluid mt-3 d-none" alt="Preview" style="max-height: 200px;" />
+          <audio id="audio-preview" class="w-100 mt-3 d-none" controls></audio>
         </div>
         <div class="mb-3">
           <label for="model-select" class="form-label">Select Model</label>
@@ -50,12 +51,6 @@ export const UploadFilesCard = (uploadProgressModal: string) => `
             Reset
           </button>
         </div>
-        <div class="text-center" id="spinner" style="display: none">
-          <div class="spinner-border" role="status">
-            <span class="visually-hidden">Uploading...</span>
-          </div>
-        </div>
       </form>
     </div>
-  </div>
-  ${uploadProgressModal}`;
+  </div>`; 
