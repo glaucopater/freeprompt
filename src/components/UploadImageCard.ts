@@ -34,6 +34,12 @@ export const UploadFilesCard = (uploadProgressModal: string) => `
             <label class="form-check-label" for="auto-upload-switch">Auto-analyze</label>
           </div>
         </div>
+        <div class="form-check form-switch p-0 mt-2">
+          <div class="d-inline-flex flex-row-reverse gap-1">
+            <input class="form-check-input ms-0" type="checkbox" role="switch" id="auto-shrink-switch" checked />
+            <label class="form-check-label" for="auto-shrink-switch">Auto shrink image</label>
+          </div>
+        </div>
         <div class="d-flex gap-2 justify-content-center mt-4">
           <button
             type="submit"

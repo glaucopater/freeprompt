@@ -4,6 +4,16 @@ export interface AnalysisVisionData {
   palette: string[];
   processingTime: number;
   model: string;
+  imageStats?: {
+    originalSize: number;
+    resizedSize: number;
+    originalWidth?: number;
+    originalHeight?: number;
+    originalAspectRatio?: number;
+    resizedWidth?: number;
+    resizedHeight?: number;
+    resizedAspectRatio?: number;
+  };
 }
 
 export interface AnalysisHearingData {
