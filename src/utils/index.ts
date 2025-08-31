@@ -1,19 +1,11 @@
 import { MAX_FILE_SIZE } from "../constants";
 import { AnalysisVisionData } from "../types";
 
-export const parseVisionResponseData = (data: string, metadata?: { processingTime: number, model: string }) => {
-  // replace multiple times "\n\n" with "\n"
+export const parseVisionResponseData = (data: string, metadata?: { processingTime: number, model: string, imageStats: { originalSize: number, resizedSize: number, originalWidth?: number, originalHeight?: number, originalAspectRatio?: number, resizedWidth?: number, resizedHeight?: number, resizedAspectRatio?: number } }) => {
+  // replace multiple times "\n\n" with "\n"  
   const filteredData = data.replace(/\n+/g, "\n");
   const [descriptionRaw, categoriesRaw, paletteRaw] = filteredData.split("\n");
-
-  const responseData = {
-    description: descriptionRaw,
-    categories: categoriesRaw.split(",").map((category) => category.trim()),
-    palette: paletteRaw.split(",").map((color) => color.trim()),
-    processingTime: metadata?.processingTime || 0,
-    model: metadata?.model || "Unknown"
-  } as AnalysisVisionData;
-
+  const responseData = { description: descriptionRaw, categories: categoriesRaw.split(",").map((category) => category.trim()), palette: paletteRaw.split(",").map((color) => color.trim()), processingTime: metadata?.processingTime || 0, model: metadata?.model || "Unknown", imageStats: metadata?.imageStats } as AnalysisVisionData; 
   return responseData;
 };
 
@@ -61,9 +53,9 @@ export const parseAudioResponseData = (data: string | null, metadata?: { process
   }
 
   const [transcript, language, translation] = parsedItems;
-  return { 
-    transcript: cleanFormatting(transcript || ""), 
-    language: cleanFormatting(language || "Unknown"), 
+  return {
+    transcript: cleanFormatting(transcript || ""),
+    language: cleanFormatting(language || "Unknown"),
     translation: cleanFormatting(translation || ""),
     processingTime: metadata?.processingTime || 0,
     model: metadata?.model || "Unknown"

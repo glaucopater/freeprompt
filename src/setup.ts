@@ -354,19 +354,95 @@ export const setupEvents = () => {
       const selectedModel = modelSelect.value;
 
       if (file.type.startsWith("image/")) {
+        // Check auto-shrink toggle
+        const autoShrink = (document.getElementById('auto-shrink-switch') as HTMLInputElement)?.checked ?? true;
+
+        let resizedBase64: string;
+        let imageStats: {
+          originalSize: number;
+          resizedSize: number;
+          originalWidth?: number;
+          originalHeight?: number;
+          originalAspectRatio?: number;
+          resizedWidth?: number;
+          resizedHeight?: number;
+          resizedAspectRatio?: number;
+        };
+
+        if (autoShrink) {
+          // First, resize the image by calling the resize-image function
+          const resizeResponse = await fetch(`${FUNCTIONS_PATH}/resize-image`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              data: base64,
+            }),
+          });
+
+          if (!resizeResponse.ok) {
+            throw new Error('Failed to resize image');
+          }
+
+          // Parse JSON response from resize-image and extract the base64 and stats
+          const resizeJson = await resizeResponse.json();
+          resizedBase64 = resizeJson.resizedImage || resizeJson.data || '';
+          imageStats = resizeJson.imageStats || {
+            originalSize: parseInt(resizeResponse.headers.get('X-Original-Size') || '0'),
+            resizedSize: parseInt(resizeResponse.headers.get('X-Resized-Size') || '0'),
+          };
+        } else {
+          // Skip resizing; use original base64
+          resizedBase64 = base64;
+          // Estimate byte length from base64
+          const byteLength = Math.ceil((base64.length * 3) / 4);
+
+          // Derive image dimensions by loading the base64 data URL
+          const dataUrl = `data:${file.type};base64,${base64}`;
+          const imgDims = await new Promise<{ width: number | undefined; height: number | undefined }>((resolve) => {
+            const img = new Image();
+            img.onload = () => resolve({ width: img.naturalWidth || undefined, height: img.naturalHeight || undefined });
+            img.onerror = () => resolve({ width: undefined, height: undefined });
+            img.src = dataUrl;
+          });
+
+          const originalWidth = imgDims.width;
+          const originalHeight = imgDims.height;
+          const originalAspectRatio = originalWidth && originalHeight ? originalWidth / originalHeight : undefined;
+
+          // When not shrinking, resized values equal original
+          const resizedWidth = originalWidth;
+          const resizedHeight = originalHeight;
+          const resizedAspectRatio = originalAspectRatio;
+
+          imageStats = {
+            originalSize: byteLength,
+            resizedSize: byteLength,
+            originalWidth,
+            originalHeight,
+            originalAspectRatio,
+            resizedWidth,
+            resizedHeight,
+            resizedAspectRatio,
+          };
+        }
+
+        // Then, send the resized image for analysis
         const response = await fetch(`${FUNCTIONS_PATH}/gemini-vision-upload`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            data: base64,
+            data: resizedBase64,
             model: selectedModel
           }),
         });
 
         const data = await response.json();
-        const analysisVisionData = parseVisionResponseData(data.message, data.metadata);
+        const metadata = { ...data.metadata, imageStats };
+        const analysisVisionData = parseVisionResponseData(data.message, metadata);
 
         if (resultsContainer) {
           resultsContainer.innerHTML = "";

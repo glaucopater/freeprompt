@@ -33,7 +33,7 @@ export const handler: Handler = async (event) => {
     const result = await model.generateContent([
       {
         inlineData: {
-          data: Buffer.from(imageResp).toString("base64"),
+          data: imageResp.toString("base64"),
           mimeType: "image/jpeg",
         },
       },

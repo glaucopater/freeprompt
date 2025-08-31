@@ -1,4 +1,5 @@
 import { AnalysisHearingData, AnalysisVisionData } from "../../types";
+import { formatFileSize } from "../../utils";
 import { ColorSwatch } from "../ColorSwatch";
 import { SectionTitle } from "../SectionTitle";
 
@@ -86,6 +87,32 @@ export function ResponseVisionComponent(
   paletteBody.append(paletteContainer);
   paletteSection.append(paletteBody);
 
+  // Image Stats Section
+  const imageStatsSection = document.createElement("div");
+  imageStatsSection.className = "card shadow-sm bg-white rounded-3 p-4";
+  const imageStatsBody = document.createElement("div");
+  imageStatsBody.className = "";
+  imageStatsBody.append(SectionTitle("📊", "Image Stats"));
+
+  const imageStatsInfo = document.createElement("p");
+  imageStatsInfo.className = "text-secondary mb-0 text-start";
+  if (analysisData.imageStats) {
+    const s = analysisData.imageStats;
+    const originalDims = s.originalWidth && s.originalHeight ? `${s.originalWidth}x${s.originalHeight}` : 'unknown';
+    const originalAR = s.originalAspectRatio ? s.originalAspectRatio.toFixed(2) : 'unknown';
+    let resizedLine = '';
+    // Only show resized metrics if they differ from the original
+    if (!(s.resizedWidth === s.originalWidth && s.resizedHeight === s.originalHeight)) {
+      const resizedDims = s.resizedWidth && s.resizedHeight ? `${s.resizedWidth}x${s.resizedHeight}` : 'unknown';
+      const resizedAR = s.resizedAspectRatio ? s.resizedAspectRatio.toFixed(2) : 'unknown';
+      resizedLine = `<br><strong>Resized Size:</strong> ${formatFileSize(s.resizedSize)} (${resizedDims}, Aspect Ratio: ${resizedAR})`;
+    }
+
+    imageStatsInfo.innerHTML = `<strong>Original Size:</strong> ${formatFileSize(s.originalSize)} (${originalDims}, Aspect Ratio: ${originalAR})${resizedLine}`;
+  }
+  imageStatsBody.append(imageStatsInfo);
+  imageStatsSection.append(imageStatsBody);
+
   // Processing Time Section
   const timeSection = document.createElement("div");
   timeSection.className = "card shadow-sm bg-white rounded-3 p-4";
@@ -100,10 +127,11 @@ export function ResponseVisionComponent(
   timeSection.append(timeBody);
 
   // Combine all sections
-  container.append(descriptionSection, categoriesSection, paletteSection, timeSection);
+  container.append(descriptionSection, categoriesSection, paletteSection, imageStatsSection, timeSection);
 
   return container;
 }
+
 
 export function ResponseHearingComponent(
   analysisData: AnalysisHearingData | null
@@ -179,3 +207,4 @@ export function ResponseHearingComponent(
 
   return container;
 }
+
