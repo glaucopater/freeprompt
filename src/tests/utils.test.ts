@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { AnalysisVisionData } from "../types";
 import { parseVisionResponseData } from "../utils";
+import { DEFAULT_GEMINI_MODEL } from "../../netlify/functions/models";
 
 const rawResponse = {
   message:
@@ -28,12 +29,12 @@ const analysisData: AnalysisVisionData = {
   ],
   palette: ["#000000", "#FFFFFF", "#FFA500", "#008000", "#808080"],
   processingTime: 0,
-  model: "gemini-1.5-flash"
+  model: "models/gemini-2.5-flash-lite",
 };
 
 describe("parseResponseData", () => {
   it("should update the analysis data", () => {
-    const data = parseVisionResponseData(rawResponse.message, { processingTime: 0, model: "gemini-1.5-flash" });
+    const data = parseVisionResponseData(rawResponse.message, { processingTime: 0, model: DEFAULT_GEMINI_MODEL, imageStats: { originalSize: 0, resizedSize: 0 } });
     expect(data).toMatchObject(analysisData);
   });
 });

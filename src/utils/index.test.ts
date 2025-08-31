@@ -14,7 +14,8 @@ const mockHearingResponseData = [
 
 const mockMetadata = {
   processingTime: 1000,
-  model: "gemini-pro"
+  model: "gemini-pro",
+  imageStats: { originalSize: 0, resizedSize: 0 }
 };
 
 describe("parseVisionResponseData", () => {
@@ -29,7 +30,8 @@ describe("parseVisionResponseData", () => {
       categories: ["Sci-fi", "fantasy", "space", "action", "digital art"],
       palette: ["#C0C0C0", "#00FFFF", "#808000", "#A0522D", "#000080"],
       processingTime: 1000,
-      model: "gemini-pro"
+      model: "gemini-pro",
+      imageStats: { originalSize: 0, resizedSize: 0 }
     });
   });
 
@@ -65,7 +67,8 @@ describe("parseVisionResponseData", () => {
       categories: ["Illustration", "Mascot", "Icon"],
       palette: ["#F0E68C", "#FFFFE0", "#00FFFF", "#808080", "#000000"],
       processingTime: 1000,
-      model: "gemini-pro"
+      model: "gemini-pro",
+      imageStats: { originalSize: 0, resizedSize: 0 }
     });
   });
 });
@@ -80,5 +83,6 @@ describe("parseHearingResponseData", () => {
     expect(translation).toEqual("Hello, today we are out eating.");
     expect(processingTime).toEqual(1000);
     expect(model).toEqual("gemini-pro");
+
   });
 });
