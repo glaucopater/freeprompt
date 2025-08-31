@@ -73,4 +73,46 @@ yarn deploy
 - models/gemini-1.5-flash Time: 3.703 seconds
 - models/gemini-1.5-flash-8b Time: 3.203 seconds
 
+## Image resize and upload flow (client + Netlify functions)
+
+This project includes a small image preprocessing flow to make Vision uploads reliable and fast:
+
+- The client reads the uploaded file and sends a base64 payload to the Netlify function `/functions/resize-image`.
+- `resize-image` returns JSON with this shape on success:
+
+```json
+{
+    "resizedImage": "<base64 string>",
+    "imageStats": {
+        "originalSize": 12345,
+        "resizedSize": 6789,
+        "originalWidth": 4080,
+        "originalHeight": 1840,
+        "originalAspectRatio": 2.22,
+        "resizedWidth": 2040,
+        "resizedHeight": 920,
+        "resizedAspectRatio": 2.22
+    }
+}
+```
+
+- By default the server resizes images to 50% of the original width (with `withoutEnlargement: true`). If the original width is not available, it falls back to 1024px.
+- The UI includes an `Auto shrink image` toggle (default: enabled). When disabled, the client skips resize and sends the original image to the analysis function; the client also populates `imageStats` by loading the original image to extract width/height.
+
+## Quick test
+
+1. Start Netlify dev (or your preferred dev server):
+```powershell
+ntl dev
+```
+
+2. Upload an image using the UI. Toggle `Auto shrink image` to test both paths.
+
+3. To test the resize function manually with curl, create a `payload.json` with `{"data": "<base64 image>"}` and run:
+```powershell
+curl -X POST -H "Content-Type: application/json" -d @payload.json http://localhost:8888/.netlify/functions/resize-image
+```
+
+The function will return the JSON documented above.
+
 
