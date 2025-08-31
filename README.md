@@ -61,3 +61,16 @@ To deploy a production build to Netlify Website:
 yarn deploy
 ```
 
+
+## Available Models and avereage executiontime (Tested)
+
+- models/gemini-2.5-pro Time: 13.530 seconds
+- models/gemini-2.5-flash Time: 8.115 seconds
+- models/gemini-2.5-flash-lite Time: 2.189 seconds
+- models/gemini-2.0-flash Time: 3.024 seconds
+- models/gemini-2.0-flash-lite Time: 3.530 seconds
+- models/gemini-2.0-flash-lite-preview-02-05 Time: 3.332 seconds
+- models/gemini-1.5-flash Time: 3.703 seconds
+- models/gemini-1.5-flash-8b Time: 3.203 seconds
+
+

@@ -1,4 +1,4 @@
-import { GEMINI_MODELS, DEFAULT_GEMINI_MODEL } from "../../netlify/functions/models";
+import { GEMINI_MODEL_INFO, DEFAULT_GEMINI_MODEL, NOT_SUPPORTED_FOR_IMAGE_ANALYSE } from "../../netlify/functions/models";
 
 export const UploadFilesCard = (uploadProgressModal: string) => `
   <div class="card shadow-sm">
@@ -16,12 +16,13 @@ export const UploadFilesCard = (uploadProgressModal: string) => `
           <img id="image-preview" class="img-fluid mt-3 d-none" alt="Preview" style="max-height: 200px;" />
         </div>
         <div class="mb-3">
-          <label for="model-select" class="form-label">Select Model</label>
+          <label for="model-select" class="form-label">Select Model (sorted by perfomance)</label>
           <select class="form-select" id="model-select" name="model">
-            ${Object.entries(GEMINI_MODELS)
-              .map(([key, value]) => `
+            ${GEMINI_MODEL_INFO
+              .filter(model => !NOT_SUPPORTED_FOR_IMAGE_ANALYSE.includes(model.value))
+              .map(({ name, value, description }) => `
                 <option value="${value}" ${value === DEFAULT_GEMINI_MODEL ? 'selected' : ''}>
-                  ${key.replace(/_/g, ' ').replace(/GEMINI/g, 'Gemini')}
+                  ${name.replace(/_/g, ' ').replace(/GEMINI/g, 'Gemini')} (${description})
                 </option>
               `)
               .join('')}
@@ -59,3 +60,4 @@ export const UploadFilesCard = (uploadProgressModal: string) => `
     </div>
   </div>
   ${uploadProgressModal}`;
+
