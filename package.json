@@ -1,15 +1,15 @@
 {
   "name": "freeprompt",
   "private": true,
-  "version": "1.0.11",
+  "version": "1.0.12",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "start": "ntl dev",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "vitest",
-    "prepare": "husky install"
+    "test": "vitest run",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@types/bootstrap": "^5.2.10",
@@ -27,6 +27,7 @@
     "@netlify/functions": "^3.0.0",
     "@popperjs/core": "^2.11.8",
     "bootstrap": "^5.3.3",
-    "dotenv": "^16.4.7"
+    "dotenv": "^16.4.7",
+    "ntl": "^5.1.0"
   }
 }
