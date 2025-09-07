@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseVisionResponseData, parseAudioResponseData } from ".";
+import { parseVisionResponseData, parseAudioResponseData, getTitleAndDescriptionWithTextResponse } from ".";
 
 const mockVisionResponseData = [
   "A cartoon bee is illustrated with photography, settings, and social media symbols around it, suggesting a connection to digital services or marketing.\n\nIllustration, Mascot, Icon\n\n#F0E68C,#FFFFE0,#00FFFF,#808080,#000000",
@@ -41,7 +41,7 @@ describe("parseVisionResponseData", () => {
     expect(result.description).toEqual(
       "A cartoon bee is illustrated with photography, settings, and social media symbols around it, suggesting a connection to digital services or marketing."
     );
-    expect(result.categories).toEqual(["Illustration", "Mascot", "Icon"]);
+    expect(result.categories).toEqual(["Illustration", "Mascot", "Icon"]);;
     expect(result.palette).toHaveLength(5);
     expect(result.processingTime).toEqual(1000);
     expect(result.model).toEqual("gemini-pro");
@@ -84,5 +84,29 @@ describe("parseHearingResponseData", () => {
     expect(processingTime).toEqual(1000);
     expect(model).toEqual("gemini-pro");
 
+  });
+});
+
+describe("getTitleAndDescriptionWithTextResponse", () => {
+  it("should correctly parse title, description from a Gemini response with markdown", () => {
+    const mockResponseMessage = "Here's your image, along with a title and description: **Title:** Sunset Cabin Retreat **Description:** A picturesque, cozy cabin basks in the warm glow of a setting sun. Smoke gently curls from its chimney, hinting at a crackling fire within, while the surrounding landscape is painted in the rich, vibrant hues of dusk."
+
+ 
+    const result = getTitleAndDescriptionWithTextResponse(mockResponseMessage as any); // Cast to any for simplicity in test
+
+    expect(result.title).toEqual("Sunset Cabin Retreat");
+    expect(result.description).toEqual("A picturesque, cozy cabin basks in the warm glow of a setting sun. Smoke gently curls from its chimney, hinting at a crackling fire within, while the surrounding landscape is painted in the rich, vibrant hues of dusk.");
+  });
+
+
+  it("should correctly parse title, description from a Gemini response with markdown and newlines", () => {
+
+
+    const mockResponseMessage = "Here's your image, along with a title and description:\n\n**Title:** Sunset Cabin Retreat\n\n**Description:** A picturesque, cozy cabin basks in the warm glow of a setting sun. The sky is painted with vibrant hues of orange, pink, and purple, casting long, soft shadows across the tranquil landscape."
+
+    const result = getTitleAndDescriptionWithTextResponse(mockResponseMessage as any); // Cast to any for simplicity in test
+
+    expect(result.title).toEqual("Sunset Cabin Retreat");
+    expect(result.description).toEqual("A picturesque, cozy cabin basks in the warm glow of a setting sun. The sky is painted with vibrant hues of orange, pink, and purple, casting long, soft shadows across the tranquil landscape.");
   });
 });

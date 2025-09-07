@@ -1,4 +1,5 @@
 import "bootstrap/dist/css/bootstrap.min.css";
+import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import {
   convertWebPToPNGBase64,
   formatFileSize,
@@ -12,7 +13,8 @@ import { ResponseHearingComponent } from "./components/ResponseHearingComponent"
 /**
 * Set up all the event listeners for the page.
 *
-* Adds event listeners to the upload area, file input, upload button, and
+* Adds event listeners to the upload area, file input, upload button,
+* and
 * form. These event listeners handle drag and drop events, file input
 * changes, form submissions, and modal close events.
 *
@@ -24,7 +26,10 @@ import { ResponseHearingComponent } from "./components/ResponseHearingComponent"
 * The modal is also cleared when it is closed.
 */
 
+let eventsAreSetup = false;
+
 export const setupEvents = () => {
+  if (eventsAreSetup) return;
   // region Upload Area
   const uploadImageArea: HTMLElement | null =
     document.getElementById("upload-area");
@@ -218,6 +223,138 @@ export const setupEvents = () => {
 
     // endregion audio
   }
+
+  // region Generate Media UI handlers
+  const generateButton = document.getElementById("generate-button") as HTMLButtonElement | null;
+  const generateReset = document.getElementById("generate-reset") as HTMLButtonElement | null;
+  const genPrompt = document.getElementById("gen-prompt") as HTMLTextAreaElement | null;
+  const genPromptFixed = document.getElementById("gen-prompt-fixed") as HTMLTextAreaElement | null;
+  const genModel = document.getElementById("gen-model") as HTMLSelectElement | null;
+  const genType = document.getElementById("gen-type") as HTMLSelectElement | null;
+  const generatedMediaContainer = document.getElementById("generated-media") as HTMLElement | null;
+  const generateOutput = document.getElementById("generate-output") as HTMLElement | null;
+
+  generateReset?.addEventListener("click", () => {
+    if (genPrompt) genPrompt.value = "";
+    if (generatedMediaContainer) generatedMediaContainer.innerHTML = "";
+    if (generateOutput) generateOutput.classList.add("d-none");
+  });
+
+  generateButton?.addEventListener("click", async () => {
+    if (!genPrompt || !genPromptFixed) return;
+    let userPrompt = genPrompt.value.trim();
+    if (!userPrompt) {
+      // minimal validation
+      alert("Please enter a prompt");
+      return;
+    }
+
+    if (userPrompt.endsWith('.')) {
+      userPrompt = userPrompt.slice(0, -1);
+    }
+
+    const fixedPrompt = genPromptFixed.value.trim();
+    const combinedPrompt = `${fixedPrompt}\n\n${userPrompt}`;
+
+    generateButton.disabled = true;
+    try {
+      const payload = { prompt: combinedPrompt, model: genModel?.value, type: genType?.value };
+      const response = await fetch(`${FUNCTIONS_PATH}/gemini-generate-images`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      if (response.status === 429) {
+        const retry = data.retryAfterSeconds;
+        const msg = `Quota exceeded. Retry after ${retry ? retry + 's' : 'some time'}`;
+        console.warn(msg, data.error);        
+        // If server provided placeholder, show it
+        if (data.dataUri && generatedMediaContainer) {
+          const img = document.createElement("img");
+          img.className = "img-fluid";
+          img.alt = "Generated media (placeholder)";
+          img.src = data.dataUri;
+          generatedMediaContainer.innerHTML = "";
+          generatedMediaContainer.appendChild(img);
+          if (generateOutput) generateOutput.classList.remove("d-none");
+        }
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || "Generation failed");
+      }
+
+
+ 
+      let title = "Generated Media";
+      let description = " -";
+
+      const regex = /\*\*Title:\*\*\s*(?<title>.+?)\s*\n+\s*\*\*Description:\*\*\s*(?<description>.+)/s;
+      const match = data.message.match(regex);
+
+      if (match && match?.groups) {
+        title = match.groups.title;
+        description = match.groups.description;
+       }
+
+      const { dataUri } = data;
+
+      if (generatedMediaContainer) {
+        generatedMediaContainer.innerHTML = "";
+
+        if (title) {
+          const titleEl = document.createElement("h3");
+          titleEl.className = "fs-5 fw-semibold text-dark mb-2";
+          titleEl.textContent = title;
+          generatedMediaContainer.appendChild(titleEl);
+        }
+
+        if ((genType?.value ?? "image") === "audio") {
+          const audio = document.createElement("audio");
+          audio.controls = true;
+          audio.src = dataUri;
+          generatedMediaContainer.appendChild(audio);
+        } else if (dataUri) {
+          const imageCaptionContainer = document.createElement("div");
+          imageCaptionContainer.className = "image-caption-container mb-3";
+
+          const img = document.createElement("img");
+          img.className = "img-fluid rounded";
+          img.alt = title || "Generated media";
+          img.src = dataUri;
+          imageCaptionContainer.appendChild(img);
+
+          if (description) {
+            const descEl = document.createElement("div");
+            descEl.className = "image-caption";
+            descEl.textContent = description;
+            imageCaptionContainer.appendChild(descEl);
+          }
+
+          generatedMediaContainer.appendChild(imageCaptionContainer);
+
+          const downloadButton = document.createElement("a");
+          downloadButton.href = dataUri;
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-') ;
+          downloadButton.download = title ? `${title.replace(/\s+/g, '_')}.png` : `image_${timestamp}.png`;
+          downloadButton.className = "btn btn-secondary btn-sm mt-2";
+          downloadButton.textContent = "Download Image";
+          generatedMediaContainer.appendChild(downloadButton);
+        }
+
+        if (generateOutput) generateOutput.classList.remove("d-none");
+      }
+    } catch (err) {
+      console.error("Generate error:", err);      
+    } finally {
+      generateButton.disabled = false;
+    }
+  });
+
+  // endregion Generate Media UI handlers
 
   function handleImageFiles(files: FileList | null) {
     if (!files?.length) return;
@@ -503,7 +640,6 @@ async function updateHealthcheckStatus() {
 
     if (response.status === 200) {
       healthStatus.textContent = "🟢";
-      setupEvents();
     } else {
       healthStatus.textContent = "🔴";
     }

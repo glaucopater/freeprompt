@@ -2,7 +2,11 @@ import { GEMINI_MODEL_INFO, DEFAULT_GEMINI_MODEL, NOT_SUPPORTED_FOR_IMAGE_ANALYS
 
 export const UploadFilesCard = (uploadProgressModal: string) => `
   <div class="card shadow-sm">
-    <div class="card-body">      
+    <div class="card-body">    
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <span class="text-primary fs-5">🔬</span>
+        <h2 class="fs-4 fw-semibold text-dark mb-0">Media Analyzer</h2>
+      </div>  
       <form
         action="/upload-and-analyze"
         method="post"

@@ -5,7 +5,7 @@ export const parseVisionResponseData = (data: string, metadata?: { processingTim
   // replace multiple times "\n\n" with "\n"  
   const filteredData = data.replace(/\n+/g, "\n");
   const [descriptionRaw, categoriesRaw, paletteRaw] = filteredData.split("\n");
-  const responseData = { description: descriptionRaw, categories: categoriesRaw.split(",").map((category) => category.trim()), palette: paletteRaw.split(",").map((color) => color.trim()), processingTime: metadata?.processingTime || 0, model: metadata?.model || "Unknown", imageStats: metadata?.imageStats } as AnalysisVisionData; 
+  const responseData = { description: descriptionRaw, categories: categoriesRaw.split(",").map((category) => category.trim()), palette: paletteRaw.split(",").map((color) => color.trim()), processingTime: metadata?.processingTime || 0, model: metadata?.model || "Unknown", imageStats: metadata?.imageStats } as AnalysisVisionData;
   return responseData;
 };
 
@@ -41,7 +41,7 @@ export const parseAudioResponseData = (data: string | null, metadata?: { process
     };
   }
 
-  // to cover the case when the LLM is adding "Okay, here is the transcript, language, and translation:"...
+  // to cover the case when the LLM is adding "Okay, here is the transcript, language, and translation:"
   if (parsedItems.length > 3 && parsedItems[parsedItems.length - 1] !== "") {
     return {
       transcript: cleanFormatting(parsedItems[1] || ""),
@@ -83,4 +83,23 @@ export const convertWebPToPNGBase64 = (webpBase64: string) => {
     img.onerror = reject;
     img.src = webpBase64;
   });
+};
+
+
+export const getTitleAndDescriptionWithTextResponse = (message: any) => {
+  let title = "Generated Media";
+  let description = " -";
+  const regex = /\*\*Title:\*\*\s*(?<title>.+?)\s*\n*\s*\*\*Description:\*\*\s*(?<description>.+)/s;
+  const match = message.match(regex);
+
+  if (match && match?.groups) {
+    title = match.groups.title;
+    description = match.groups.description;
+  }
+  else {
+    console.log("No title/description match found");
+  }
+
+  return { title, description }
+
 };

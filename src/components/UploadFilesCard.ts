@@ -20,13 +20,13 @@ export const UploadFilesCard = () => `
           <label for="model-select" class="form-label">Select Model</label>
           <select class="form-select" id="model-select" name="model">
             ${GEMINI_MODEL_INFO
-              .filter(model => !NOT_SUPPORTED_FOR_IMAGE_ANALYSE.includes(model.value))
-              .map(({ name, value, description }) => `
+    .filter(model => !NOT_SUPPORTED_FOR_IMAGE_ANALYSE.includes(model.value))
+    .map(({ name, value, description }) => `
                 <option value="${value}" ${value === DEFAULT_GEMINI_MODEL ? 'selected' : ''}>
                   ${name.replace(/_/g, ' ').replace(/GEMINI/g, 'Gemini')} (${description})
                 </option>
               `)
-              .join('')}
+    .join('')}
           </select>
         </div>
         <div class="form-check form-switch p-0">
