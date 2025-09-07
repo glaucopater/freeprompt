@@ -89,17 +89,17 @@ export const convertWebPToPNGBase64 = (webpBase64: string) => {
 export const getTitleAndDescriptionWithTextResponse = (message: any) => {
   let title = "Generated Media";
   let description = " -";
-  const regex = /\*\*Title:\*\*\s*(?<title>.+?)\s*\n*\s*\*\*Description:\*\*\s*(?<description>.+)/s;
+
+  const regex = /Title:\s*(\*\*)?(?<title>.+?)\1?\s*\n*\s*Description:\s*(\*\*)?(?<description>.+)\3?/s;
+
   const match = message.match(regex);
 
-  if (match && match?.groups) {
-    title = match.groups.title;
-    description = match.groups.description;
-  }
-  else {
-    console.log("No title/description match found");
+  if (match && match.groups) {
+    title = match.groups.title.trim().replace(/^"+|"+$/g, "");
+    description = match.groups.description.trim().replace(/^"+|"+$/g, "");
+  } else {
+    description = message.trim().replace(/^"+|"+$/g, "");
   }
 
-  return { title, description }
-
+  return { title, description };
 };
