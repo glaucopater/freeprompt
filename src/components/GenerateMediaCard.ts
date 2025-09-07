@@ -5,13 +5,13 @@ export const GenerateMediaCard = () => `
     <div class="card-body">
       <div class="d-flex align-items-center gap-2 mb-3">
         <span class="text-primary fs-5">🍌</span>
-        <h2 class="fs-4 fw-semibold text-dark mb-0">Generate image</h2>
+        <h2 class="fs-4 fw-semibold text-dark mb-0">Generate image (Experimental)</h2>
       </div>
 
       <div class="mb-3">
         <label for="gen-prompt" class="form-label">Prompt</label>
         <textarea id="gen-prompt" class="form-control" rows="3" placeholder="Describe the media you want to generate (e.g. 'A cozy cabin at sunset')">A cozy cabin at sunset</textarea>
-        <textarea id="gen-prompt-fixed" class="form-control" rows="2" placeholder="Fixed Prompt" > and give me also a title and description for the image.</textarea>
+        <textarea id="gen-prompt-fixed" class="form-control d-none" rows="2" placeholder="Fixed Prompt" readonly> and give me also a title and description for the image.</textarea>
       </div>
 
       <div class="row g-2 mb-3">
