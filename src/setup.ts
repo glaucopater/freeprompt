@@ -269,8 +269,7 @@ export const setupEvents = () => {
       if (response.status === 429) {
         const retry = data.retryAfterSeconds;
         const msg = `Quota exceeded. Retry after ${retry ? retry + 's' : 'some time'}`;
-        console.warn(msg, data.error);
-        alert(msg);
+        console.warn(msg, data.error);        
         // If server provided placeholder, show it
         if (data.dataUri && generatedMediaContainer) {
           const img = document.createElement("img");
@@ -339,7 +338,7 @@ export const setupEvents = () => {
 
           const downloadButton = document.createElement("a");
           downloadButton.href = dataUri;
-          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-') ;
           downloadButton.download = title ? `${title.replace(/\s+/g, '_')}.png` : `image_${timestamp}.png`;
           downloadButton.className = "btn btn-secondary btn-sm mt-2";
           downloadButton.textContent = "Download Image";
@@ -349,8 +348,7 @@ export const setupEvents = () => {
         if (generateOutput) generateOutput.classList.remove("d-none");
       }
     } catch (err) {
-      console.error("Generate error:", err);
-      alert("Failed to generate media. Check console for details.");
+      console.error("Generate error:", err);      
     } finally {
       generateButton.disabled = false;
     }
@@ -642,7 +640,6 @@ async function updateHealthcheckStatus() {
 
     if (response.status === 200) {
       healthStatus.textContent = "🟢";
-      setupEvents();
     } else {
       healthStatus.textContent = "🔴";
     }
