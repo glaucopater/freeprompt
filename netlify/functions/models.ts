@@ -69,4 +69,10 @@ export const NOT_SUPPORTED_FOR_IMAGE_ANALYSE = [
 ]
 
 
+// NOR supported for images analyzes  
+
+export const IMAGE_GENERATION_MODELS = [
+  "models/gemini-2.5-flash-image-preview",
+  "models/gemini-2.0-flash-preview-image-generation"
+]
 

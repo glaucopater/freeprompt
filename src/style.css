@@ -208,3 +208,70 @@ footer p {
     width: 640px;
   }
 }
+
+/* Tab styling */
+.nav-tabs .nav-link {
+  color: #6c757d;
+  border: 1px solid transparent;
+  border-top-left-radius: .25rem;
+  border-top-right-radius: .25rem;
+}
+
+.nav-tabs .nav-link.active {
+  color: #495057;
+  background-color: #fff;
+  border-color: #dee2e6 #dee2e6 #fff;
+}
+
+.tab-content {
+  border: 1px solid #dee2e6;
+  border-top: 0;
+  padding: 1.5rem;
+  border-bottom-left-radius: .25rem;
+  border-bottom-right-radius: .25rem;
+  background-color: #fff;
+  min-height: 600px;
+}
+
+.image-caption-container {
+  position: relative;
+  display: inline-block;
+}
+
+.image-caption {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 1rem;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+  font-size: 0.9rem;
+  text-align: left;
+}
+
+.image-caption-container:hover .image-caption {
+  opacity: 1;
+}
+
+
+/* Ensure dark mode compatibility */
+@media (prefers-color-scheme: dark) {
+  .nav-tabs .nav-link {
+    color: #adb5bd;
+    border-color: transparent;
+  }
+
+  .nav-tabs .nav-link.active {
+    color: #e9ecef;
+    background-color: #343a40;
+    border-color: #495057 #495057 #343a40;
+  }
+
+  .tab-content {
+    background-color: #343a40;
+    border-color: #495057;
+  }
+}
