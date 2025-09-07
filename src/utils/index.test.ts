@@ -90,8 +90,6 @@ describe("parseHearingResponseData", () => {
 describe("getTitleAndDescriptionWithTextResponse", () => {
   it("should correctly parse title, description from a Gemini response with markdown", () => {
     const mockResponseMessage = "Here's your image, along with a title and description: **Title:** Sunset Cabin Retreat **Description:** A picturesque, cozy cabin basks in the warm glow of a setting sun. Smoke gently curls from its chimney, hinting at a crackling fire within, while the surrounding landscape is painted in the rich, vibrant hues of dusk."
-
- 
     const result = getTitleAndDescriptionWithTextResponse(mockResponseMessage as any); // Cast to any for simplicity in test
 
     expect(result.title).toEqual("Sunset Cabin Retreat");
@@ -100,13 +98,43 @@ describe("getTitleAndDescriptionWithTextResponse", () => {
 
 
   it("should correctly parse title, description from a Gemini response with markdown and newlines", () => {
-
-
     const mockResponseMessage = "Here's your image, along with a title and description:\n\n**Title:** Sunset Cabin Retreat\n\n**Description:** A picturesque, cozy cabin basks in the warm glow of a setting sun. The sky is painted with vibrant hues of orange, pink, and purple, casting long, soft shadows across the tranquil landscape."
-
     const result = getTitleAndDescriptionWithTextResponse(mockResponseMessage as any); // Cast to any for simplicity in test
 
     expect(result.title).toEqual("Sunset Cabin Retreat");
     expect(result.description).toEqual("A picturesque, cozy cabin basks in the warm glow of a setting sun. The sky is painted with vibrant hues of orange, pink, and purple, casting long, soft shadows across the tranquil landscape.");
   });
+
+
+    it("should correctly parse title, description from a Gemini response with markdown and newlines another way", () => {
+    const mockResponseMessage = "Here's an image of a cat enjoying some salmon! \nTitle: A Feline Feast: Salmon Delight\n\nDescription: A charming image captures a ginger cat with bright green eyes, intensely focused on a delicious piece of salmon on a white plate. The cat is shown mid-lick, clearly savoring its meal. The background, softly blurred, suggests a cozy home kitchen with a window letting in natural light and hints of fresh vegetables, creating a warm and inviting atmosphere around this happy moment."
+
+    const result = getTitleAndDescriptionWithTextResponse(mockResponseMessage as any); // Cast to any for simplicity in test
+
+    expect(result.title).toEqual("A Feline Feast: Salmon Delight");
+    expect(result.description).toEqual("A charming image captures a ginger cat with bright green eyes, intensely focused on a delicious piece of salmon on a white plate. The cat is shown mid-lick, clearly savoring its meal. The background, softly blurred, suggests a cozy home kitchen with a window letting in natural light and hints of fresh vegetables, creating a warm and inviting atmosphere around this happy moment.");
+  });
+
+
+
+    it("should correctly parse title, description from a Gemini response with markdown and newlines another way again", () => {
+    const mockResponseMessage = "Certainly! Here's your image: \nTitle: **Golden Hour Haven**\n\nDescription: This image captures a serene winter scene at sunset, featuring a cozy cabin nestled beside a gently flowing stream. The warm glow of the setting sun paints the sky in soft oranges and purples, reflecting beautifully on the water's surface. Snow-covered pine trees surround the cabin, which emanates a welcoming light from its windows and porch. A comfortable chair on the porch, a stack of firewood, and faint smoke curling from the chimney add to the idyllic and inviting atmosphere.";
+
+    const result = getTitleAndDescriptionWithTextResponse(mockResponseMessage as any); // Cast to any for simplicity in test
+
+    expect(result.title).toEqual("Golden Hour Haven");
+    expect(result.description).toEqual("This image captures a serene winter scene at sunset, featuring a cozy cabin nestled beside a gently flowing stream. The warm glow of the setting sun paints the sky in soft oranges and purples, reflecting beautifully on the water's surface. Snow-covered pine trees surround the cabin, which emanates a welcoming light from its windows and porch. A comfortable chair on the porch, a stack of firewood, and faint smoke curling from the chimney add to the idyllic and inviting atmosphere.");
+  });
+  
+
+  
+    it("should correctly parse title, description from a Gemini response with markdown and newlines another way again", () => {
+    const mockResponseMessage = "Certainly! Here's your image: \nTitle: \"Winter's Embrace: A Cozy Cabin Sunset\"\n\nDescription: \"This enchanting image captures a tranquil winter scene as the sun dips below the horizon, painting the sky in soft hues of orange and pink. A charming, snow-covered cabin, nestled amidst a forest of pine trees, emanates a warm, inviting glow from its windows and porch lights. Smoke gently curls from its chimney, hinting at a crackling fire within. A winding, partially frozen stream reflects the last rays of sunlight, adding to the serene beauty of this idyllic, snowy landscape. Fresh footprints in the snow suggest recent activity, inviting viewers to imagine a peaceful retreat.";
+
+    const result = getTitleAndDescriptionWithTextResponse(mockResponseMessage as any); // Cast to any for simplicity in test
+
+    expect(result.title).toEqual("Winter's Embrace: A Cozy Cabin Sunset");
+    expect(result.description).toEqual("This enchanting image captures a tranquil winter scene as the sun dips below the horizon, painting the sky in soft hues of orange and pink. A charming, snow-covered cabin, nestled amidst a forest of pine trees, emanates a warm, inviting glow from its windows and porch lights. Smoke gently curls from its chimney, hinting at a crackling fire within. A winding, partially frozen stream reflects the last rays of sunlight, adding to the serene beauty of this idyllic, snowy landscape. Fresh footprints in the snow suggest recent activity, inviting viewers to imagine a peaceful retreat.");
+  });
+  
 });

@@ -9,9 +9,9 @@ export const GenerateMediaCard = () => `
       </div>
 
       <div class="mb-3">
-        <label for="gen-prompt" class="form-label">Prompt</label>
-        <textarea id="gen-prompt" class="form-control" rows="3" placeholder="Describe the media you want to generate (e.g. 'A cozy cabin at sunset')">A cozy cabin at sunset</textarea>
-        <textarea id="gen-prompt-fixed" class="form-control d-none" rows="2" placeholder="Fixed Prompt" readonly> and give me also a title and description for the image.</textarea>
+        <label for="gen-prompt" class="form-label">Prompt (if nothing happens ask directly to generate an image of...)</label>
+        <textarea id="gen-prompt" class="form-control" rows="3" placeholder="Describe the media you want to generate (e.g. 'An image of cozy cabin at sunset')">An image of a cozy cabin at sunset</textarea>
+        <textarea id="gen-prompt-fixed" class="form-control" rows="2" placeholder="Extra Prompt"> and give me also a title and description for the image.</textarea>
       </div>
 
       <div class="row g-2 mb-3">
@@ -24,11 +24,11 @@ export const GenerateMediaCard = () => `
         <div class="col-12 col-md-6">
           <label for="gen-model" class="form-label">Model</label>
           <select id="gen-model" class="form-select">
-            ${IMAGE_GENERATION_MODELS.slice(0,2).map((value) => {
-              const info = GEMINI_MODEL_INFO.find(m => m.value === value);
-              const name = info ? info.name.replace(/_/g, ' ').replace(/GEMINI/g, 'Gemini') : value;
-              const desc = info ? ` (${info.description})` : '';
-              return `
+            ${IMAGE_GENERATION_MODELS.slice(0, 2).map((value) => {
+  const info = GEMINI_MODEL_INFO.find(m => m.value === value);
+  const name = info ? info.name.replace(/_/g, ' ').replace(/GEMINI/g, 'Gemini') : value;
+  const desc = info ? ` (${info.description})` : '';
+  return `
               <option value="${value}" ${value === DEFAULT_GEMINI_MODEL ? 'selected' : ''}>
                 ${name}${desc}
               </option>
