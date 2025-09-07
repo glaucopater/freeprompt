@@ -116,3 +116,8 @@ curl -X POST -H "Content-Type: application/json" -d @payload.json http://localho
 The function will return the JSON documented above.
 
 
+## Recent Improvements
+
+-   **Enhanced Image Generation Parsing**: Improved the parsing logic for Gemini API responses in image generation, ensuring accurate extraction of title, description, and dataUri.
+-   **Robust Unit Testing**: Fixed and improved unit tests for image analysis and utility functions, ensuring better code quality and reliability.
+-   **UI Event Handling Fix**: Resolved an issue where image generation was triggered multiple times in the user interface, providing a smoother user experience.
