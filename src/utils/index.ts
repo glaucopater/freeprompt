@@ -1,8 +1,6 @@
 import { MAX_FILE_SIZE } from "../constants";
 import { AnalysisVisionData } from "../types";
 
-import { EnhancedGenerateContentResponse } from "@google/generative-ai";
-
 export const parseVisionResponseData = (data: string, metadata?: { processingTime: number, model: string, imageStats: { originalSize: number, resizedSize: number, originalWidth?: number, originalHeight?: number, originalAspectRatio?: number, resizedWidth?: number, resizedHeight?: number, resizedAspectRatio?: number } }) => {
   // replace multiple times "\n\n" with "\n"  
   const filteredData = data.replace(/\n+/g, "\n");
