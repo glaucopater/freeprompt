@@ -4,6 +4,12 @@
   functions = "netlify/functions"
   targetPort = 5173
 
+[[headers]]
+  for = "/service-worker.js"
+  [headers.values]
+    Content-Type = "application/javascript"
+    Cache-Control = "no-cache"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

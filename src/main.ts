@@ -27,28 +27,54 @@ const mediaGeneratorContent = isMediaGeneratorEnabled
   </div>`
   : "";
 
-document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
-  <div class="min-vh-100 d-flex flex-column">
-    ${Header(logo)}
+function renderShareTargetContent() {
+  return `
     <div class="container mt-4">
-      <ul class="nav nav-tabs" id="myTab" role="tablist">
-        <li class="nav-item" role="presentation">
-          <button class="nav-link active" id="analyze-tab" data-bs-toggle="tab" data-bs-target="#analyze-tab-pane" type="button" role="tab" aria-controls="analyze-tab-pane" aria-selected="true">Analyze Media</button>
-        </li>
-         ${mediaGeneratorTab}           
-      </ul>
-      <div class="tab-content" id="myTabContent">
-        <div class="tab-pane show active" id="analyze-tab-pane" role="tabpanel" aria-labelledby="analyze-tab" tabindex="0">
-          ${VisionExperiment(UploadFilesCard(UploadProgressModal()))}
-        </div>
-        ${mediaGeneratorContent}      
-      </div>
+      <h2>Content Received</h2>
+      <p>Your shared content has been received and is being processed.</p>
+      <p>Please check the Netlify Function logs for details.</p>
     </div>
+  `;
+}
 
-    ${Status()}
-    ${Footer(appDetails)}
-  </div>
-`;
+const appDiv = document.querySelector<HTMLDivElement>("#app")!;
+
+if (window.location.pathname === "/share-target/") {
+  console.log("Share target route hit. Content being processed by backend.");
+  appDiv.innerHTML = `
+    <div class="min-vh-100 d-flex flex-column">
+      ${Header(logo)}
+      ${renderShareTargetContent()}
+      ${Status()}
+      ${Footer(appDetails)}
+    </div>
+  `;
+  // Clean up the URL
+  history.replaceState({}, document.title, "/");
+} else {
+  appDiv.innerHTML = `
+    <div class="min-vh-100 d-flex flex-column">
+      ${Header(logo)}
+      <div class="container mt-4">
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="analyze-tab" data-bs-toggle="tab" data-bs-target="#analyze-tab-pane" type="button" role="tab" aria-controls="analyze-tab-pane" aria-selected="true">Analyze Media</button>
+          </li>
+           ${mediaGeneratorTab}           
+        </ul>
+        <div class="tab-content" id="myTabContent">
+          <div class="tab-pane show active" id="analyze-tab-pane" role="tabpanel" aria-labelledby="analyze-tab" tabindex="0">
+            ${VisionExperiment(UploadFilesCard(UploadProgressModal()))}
+          </div>
+          ${mediaGeneratorContent}      
+        </div>
+      </div>
+
+      ${Status()}
+      ${Footer(appDetails)}
+    </div>
+  `;
+}
 
 setupEvents();
 updateHealthcheckStatusInterval();

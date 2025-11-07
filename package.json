@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-  "start": "netlify dev",
+    "start": "netlify dev",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
@@ -13,6 +13,7 @@
   },
   "devDependencies": {
     "@types/bootstrap": "^5.2.10",
+    "@types/busboy": "^1.5.4",
     "@types/lambda-tester": "^4",
     "@types/node": "^22.10.5",
     "@types/sharp": "^0.32.0",
@@ -29,6 +30,7 @@
     "@netlify/functions": "^3.0.0",
     "@popperjs/core": "^2.11.8",
     "bootstrap": "^5.3.3",
+    "busboy": "^1.6.0",
     "dotenv": "^16.4.7",
     "ntl": "^5.1.0",
     "sharp": "^0.34.3"
