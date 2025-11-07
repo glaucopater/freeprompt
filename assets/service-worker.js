@@ -2,10 +2,8 @@ const CACHE_NAME = 'freeprompt-cache-v1';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/src/main.ts',
-  '/src/style.css',
-  '/src/assets/images/favicon.png',
-  '/src/assets/images/logo-no-bg.png',
+  '/favicon.png',
+  '/images/logo-no-bg.png',
   // Add other assets you want to cache
 ];
 

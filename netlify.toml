@@ -16,6 +16,11 @@
   status = 200
 
 [[redirects]]
+  from = "/*.js"
+  to = "/.js"
+  status = 200
+
+[[redirects]]
   from = "/share-target/*"
   to = "/.netlify/functions/share-target/:splat"
   status = 200
