@@ -18,8 +18,12 @@ const handler: Handler = async (event) => {
     const fields: { [key: string]: any } = {};
     const files: { [key: string]: { filename: string; mimetype: string; encoding: string; content: string }[] } = {};
 
-    busboy.on("file", (fieldname: string, file: Readable, filename: string, encoding: string, mimetype: string) => {
-      console.log("Busboy 'file' event:", { fieldname, filename, mimetype, encoding }); // Add this log
+    busboy.on("file", (fieldname: string, file: Readable, filename: any, encoding: string, mimetype: string) => {
+      // Extract mimetype from the filename object if it's an object
+      const actualMimetype = typeof filename === 'object' && filename.mimeType ? filename.mimeType : mimetype;
+      const actualFilename = typeof filename === 'object' && filename.filename ? filename.filename : filename;
+
+      console.log("Busboy 'file' event:", { fieldname, filename: actualFilename, actualMimetype, encoding });
       let fileContent = "";
       file.on("data", (data) => {
         fileContent += data.toString("base64"); // Store as base64
@@ -28,8 +32,8 @@ const handler: Handler = async (event) => {
         if (!files[fieldname]) {
           files[fieldname] = [];
         }
-        files[fieldname].push({ filename, mimetype, encoding, content: fileContent });
-        console.log("File processed:", files[fieldname]); // Add this log
+        files[fieldname].push({ filename: actualFilename, mimetype: actualMimetype, encoding, content: fileContent });
+        console.log("File processed:", files[fieldname]);
       });
     });
 
