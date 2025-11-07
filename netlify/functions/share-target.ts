@@ -23,7 +23,6 @@ const handler: Handler = async (event) => {
       const actualMimetype = typeof filename === 'object' && filename.mimeType ? filename.mimeType : mimetype;
       const actualFilename = typeof filename === 'object' && filename.filename ? filename.filename : filename;
 
-      console.log("Busboy 'file' event:", { fieldname, filename: actualFilename, actualMimetype, encoding });
       let fileContent = "";
       file.on("data", (data) => {
         fileContent += data.toString("base64"); // Store as base64
@@ -33,7 +32,6 @@ const handler: Handler = async (event) => {
           files[fieldname] = [];
         }
         files[fieldname].push({ filename: actualFilename, mimetype: actualMimetype, encoding, content: fileContent });
-        console.log("File processed:", files[fieldname]);
       });
     });
 
@@ -42,17 +40,11 @@ const handler: Handler = async (event) => {
     });
 
     busboy.on("finish", () => {
-      console.log("Busboy finished parsing.");
-      console.log("Fields:", fields);
-      console.log("Files object before processing:", files); // Add this log
-
       const sharedFile = files.photos && files.photos[0]; // Assuming 'photos' is the fieldname for shared files
-      console.log("Shared file after extraction:", sharedFile); // Add this log
 
       if (sharedFile && sharedFile.mimetype) {
-        console.log("Shared file mimetype:", sharedFile.mimetype); // Add this log
         if (sharedFile.mimetype.startsWith("image/")) {
-          const redirectUrl = `/?sharedImage=${encodeURIComponent(sharedFile.content)}&filename=${encodeURIComponent(sharedFile.filename)}&mimetype=${encodeURIComponent(sharedFile.mimetype)}`;
+          const redirectUrl = `/share-redirect.html?base64=${encodeURIComponent(sharedFile.content)}&filename=${encodeURIComponent(sharedFile.filename)}&mimetype=${encodeURIComponent(sharedFile.mimetype)}&type=image`;
           resolve({
             statusCode: 302,
             headers: {
@@ -61,7 +53,7 @@ const handler: Handler = async (event) => {
             body: "",
           });
         } else if (sharedFile.mimetype.startsWith("audio/")) {
-          const redirectUrl = `/?sharedAudio=${encodeURIComponent(sharedFile.content)}&filename=${encodeURIComponent(sharedFile.filename)}&mimetype=${encodeURIComponent(sharedFile.mimetype)}`;
+          const redirectUrl = `/share-redirect.html?base64=${encodeURIComponent(sharedFile.content)}&filename=${encodeURIComponent(sharedFile.filename)}&mimetype=${encodeURIComponent(sharedFile.mimetype)}&type=audio`;
           resolve({
             statusCode: 302,
             headers: {
@@ -70,8 +62,6 @@ const handler: Handler = async (event) => {
             body: "",
           });
         }
-      } else {
-        console.log("Shared file or mimetype is undefined. Redirecting to home."); // Add this log
       }
 
       // If no image or audio file, redirect to home
