@@ -13,6 +13,8 @@ export enum GEMINI_MODELS {
   GEMINI_2_5_FLASH_EXP_NATIVE_AUDIO_THINKING_DIALOG = "models/gemini-2.5-flash-exp-native-audio-thinking-dialog",
   /** Precise, conversational image generation and editing */
   GEMINI_2_5_FLASH_IMAGE_PREVIEW = "models/gemini-2.5-flash-image-preview",
+/** Precise, conversational image generation and editing GA version*/
+  GEMINI_2_5_FLASH_IMAGE = "models/gemini-2.5-flash-image",
   /** Low latency, controllable, single- and multi-speaker text-to-speech audio generation */
   GEMINI_2_5_FLASH_PREVIEW_TTS = "models/gemini-2.5-flash-preview-tts",
   /** Low latency, controllable, single- and multi-speaker text-to-speech audio generation */
@@ -49,6 +51,7 @@ export const GEMINI_MODEL_INFO = [
   { name: "GEMINI_2_5_FLASH_PREVIEW_NATIVE_AUDIO_DIALOG", value: "models/gemini-2.5-flash-preview-native-audio-dialog", description: "High quality, natural conversational audio outputs, with or without thinking" },
   { name: "GEMINI_2_5_FLASH_EXP_NATIVE_AUDIO_THINKING_DIALOG", value: "models/gemini-2.5-flash-exp-native-audio-thinking-dialog", description: "High quality, natural conversational audio outputs, with or without thinking" },
   { name: "GEMINI_2_5_FLASH_IMAGE_PREVIEW", value: "models/gemini-2.5-flash-image-preview", description: "Precise, conversational image generation and editing" },
+  { name: "GEMINI_2_5_FLASH_IMAGE", value: "models/gemini-2.5-flash-image", description: "Precise, conversational image generation and editing GA version" },
   { name: "GEMINI_2_5_FLASH_PREVIEW_TTS", value: "models/gemini-2.5-flash-preview-tts", description: "Low latency, controllable, single- and multi-speaker text-to-speech audio generation" },
   { name: "GEMINI_2_5_PRO_PREVIEW_TTS", value: "models/gemini-2.5-pro-preview-tts", description: "Low latency, controllable, single- and multi-speaker text-to-speech audio generation" },
   { name: "GEMINI_2_0_FLASH_PREVIEW_IMAGE_GENERATION", value: "models/gemini-2.0-flash-preview-image-generation", description: "Conversational image generation and editing" },
@@ -73,6 +76,7 @@ export const NOT_SUPPORTED_FOR_IMAGE_ANALYSE = [
 
 export const IMAGE_GENERATION_MODELS = [
   "models/gemini-2.5-flash-image-preview",
+  "models/gemini-2.5-flash-image",
   "models/gemini-2.0-flash-preview-image-generation"
 ]
 

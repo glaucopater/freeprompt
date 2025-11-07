@@ -11,23 +11,21 @@ import { UploadFilesCard } from "./components/UploadImageCard.ts";
 import { UploadProgressModal } from "./components/UploadProgressModal.ts";
 import { GenerateMediaCard } from "./components/GenerateMediaCard.ts";
 
+const isMediaGeneratorEnabled =
+  import.meta.env.VITE_ENABLE_MEDIA_GENERATOR === "true";
 
-const isMediaGeneratorEnabled = import.meta.env.VITE_ENABLE_MEDIA_GENERATOR === "true";
-
-
-const mediaGeneratorTab = isMediaGeneratorEnabled ? `
+const mediaGeneratorTab = isMediaGeneratorEnabled
+  ? `
  <li class="nav-item" role="presentation">
     <button class="nav-link" id="generate-tab" data-bs-toggle="tab" data-bs-target="#generate-tab-pane" type="button" role="tab" aria-controls="generate-tab-pane" aria-selected="false">Generate Image</button>
- </li>` : '';
+ </li>`
+  : "";
 
-const mediaGeneratorContent = isMediaGeneratorEnabled ?
-  `<div class="tab-pane" id="generate-tab-pane" role="tabpanel" aria-labelledby="generate-tab" tabindex="0">'
+const mediaGeneratorContent = isMediaGeneratorEnabled
+  ? `<div class="tab-pane" id="generate-tab-pane" role="tabpanel" aria-labelledby="generate-tab" tabindex="0">'
     ${GenerateMediaCard()}
   </div>`
-  : '';
-
-
-
+  : "";
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div class="min-vh-100 d-flex flex-column">
