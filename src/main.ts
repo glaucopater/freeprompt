@@ -37,10 +37,103 @@ function renderShareTargetContent() {
   `;
 }
 
+// Helper function to convert base64 to Blob
+function b64toBlob(b64Data: string, contentType = '', sliceSize = 512) {
+  const byteCharacters = atob(b64Data);
+  const byteArrays = [];
+
+  for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+    const slice = byteCharacters.slice(offset, offset + sliceSize);
+
+    const byteNumbers = new Array(slice.length);
+    for (let i = 0; i < slice.length; i++) {
+      byteNumbers[i] = slice.charCodeAt(i);
+    }
+
+    const byteArray = new Uint8Array(byteNumbers);
+    byteArrays.push(byteArray);
+  }
+
+  return new Blob(byteArrays, { type: contentType });
+}
+
 const appDiv = document.querySelector<HTMLDivElement>("#app")!;
 
-if (window.location.pathname === "/share-target/") {
-  console.log("Share target route hit. Content being processed by backend.");
+// Render the main app structure first
+appDiv.innerHTML = `
+  <div class="min-vh-100 d-flex flex-column">
+    ${Header(logo)}
+    <div class="container mt-4">
+      <ul class="nav nav-tabs" id="myTab" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="analyze-tab" data-bs-toggle="tab" data-bs-target="#analyze-tab-pane" type="button" role="tab" aria-controls="analyze-tab-pane" aria-selected="true">Analyze Media</button>
+        </li>
+         ${mediaGeneratorTab}           
+      </ul>
+      <div class="tab-content" id="myTabContent">
+        <div class="tab-pane show active" id="analyze-tab-pane" role="tabpanel" aria-labelledby="analyze-tab" tabindex="0">
+          ${VisionExperiment(UploadFilesCard(UploadProgressModal()))}
+        </div>
+        ${mediaGeneratorContent}      
+      </div>
+    </div>
+
+    ${Status()}
+    ${Footer(appDetails)}
+  </div>
+`;
+
+// Handle shared content after the DOM is rendered
+const urlParams = new URLSearchParams(window.location.search);
+const sharedImageBase64 = urlParams.get("sharedImage");
+const sharedFilename = urlParams.get("filename");
+const sharedMimetype = urlParams.get("mimetype");
+
+const sharedAudioBase64 = urlParams.get("sharedAudio");
+const sharedAudioFilename = urlParams.get("filename"); // Filename is generic
+const sharedAudioMimetype = urlParams.get("mimetype"); // Mimetype is generic
+
+if (sharedImageBase64 && sharedFilename && sharedMimetype) {
+  console.log("Shared image detected in URL parameters.");
+  const imageBlob = b64toBlob(sharedImageBase64, sharedMimetype);
+  const imageFile = new File([imageBlob], sharedFilename, { type: sharedMimetype });
+
+  const fileInput = document.getElementById("file-input") as HTMLInputElement;
+  if (fileInput) {
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(imageFile);
+    fileInput.files = dataTransfer.files;
+
+    // Dispatch a change event to trigger existing listeners
+    fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+    console.log("Shared image programmatically added to file input.");
+  } else {
+    console.error("File input element not found.");
+  }
+  // Clean up the URL after processing
+  history.replaceState({}, document.title, window.location.pathname);
+} else if (sharedAudioBase64 && sharedAudioFilename && sharedAudioMimetype) {
+  console.log("Shared audio detected in URL parameters.");
+  const audioBlob = b64toBlob(sharedAudioBase64, sharedAudioMimetype);
+  const audioFile = new File([audioBlob], sharedAudioFilename, { type: sharedAudioMimetype });
+
+  const fileInput = document.getElementById("file-input") as HTMLInputElement;
+  if (fileInput) {
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(audioFile);
+    fileInput.files = dataTransfer.files;
+
+    // Dispatch a change event to trigger existing listeners
+    fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+    console.log("Shared audio programmatically added to file input.");
+  } else {
+    console.error("File input element not found.");
+  }
+  // Clean up the URL after processing
+  history.replaceState({}, document.title, window.location.pathname);
+} else if (window.location.pathname === "/share-target/") {
+  // This block handles the case where the share target was hit, but no sharedImage/Audio param was found
+  // (e.g., if the Netlify function redirected without an image/audio, or if it was a text share)
   appDiv.innerHTML = `
     <div class="min-vh-100 d-flex flex-column">
       ${Header(logo)}
@@ -49,32 +142,9 @@ if (window.location.pathname === "/share-target/") {
       ${Footer(appDetails)}
     </div>
   `;
-  // Clean up the URL
   history.replaceState({}, document.title, "/");
-} else {
-  appDiv.innerHTML = `
-    <div class="min-vh-100 d-flex flex-column">
-      ${Header(logo)}
-      <div class="container mt-4">
-        <ul class="nav nav-tabs" id="myTab" role="tablist">
-          <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="analyze-tab" data-bs-toggle="tab" data-bs-target="#analyze-tab-pane" type="button" role="tab" aria-controls="analyze-tab-pane" aria-selected="true">Analyze Media</button>
-          </li>
-           ${mediaGeneratorTab}           
-        </ul>
-        <div class="tab-content" id="myTabContent">
-          <div class="tab-pane show active" id="analyze-tab-pane" role="tabpanel" aria-labelledby="analyze-tab" tabindex="0">
-            ${VisionExperiment(UploadFilesCard(UploadProgressModal()))}
-          </div>
-          ${mediaGeneratorContent}      
-        </div>
-      </div>
-
-      ${Status()}
-      ${Footer(appDetails)}
-    </div>
-  `;
 }
+
 
 setupEvents();
 updateHealthcheckStatusInterval();

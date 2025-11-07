@@ -40,16 +40,37 @@ const handler: Handler = async (event) => {
       console.log("Fields:", fields);
       console.log("Files:", files);
 
+      const sharedFile = files.photos && files.photos[0]; // Assuming 'photos' is the fieldname for shared files
+
+      if (sharedFile) {
+        if (sharedFile.mimetype.startsWith("image/")) {
+          const redirectUrl = `/?sharedImage=${encodeURIComponent(sharedFile.content)}&filename=${encodeURIComponent(sharedFile.filename)}&mimetype=${encodeURIComponent(sharedFile.mimetype)}`;
+          resolve({
+            statusCode: 302,
+            headers: {
+              Location: redirectUrl,
+            },
+            body: "",
+          });
+        } else if (sharedFile.mimetype.startsWith("audio/")) {
+          const redirectUrl = `/?sharedAudio=${encodeURIComponent(sharedFile.content)}&filename=${encodeURIComponent(sharedFile.filename)}&mimetype=${encodeURIComponent(sharedFile.mimetype)}`;
+          resolve({
+            statusCode: 302,
+            headers: {
+              Location: redirectUrl,
+            },
+            body: "",
+          });
+        }
+      }
+
+      // If no image or audio file, redirect to home
       resolve({
-        statusCode: 200,
-        body: JSON.stringify({
-          message: "Content received and parsed successfully!",
-          fields,
-          files: Object.keys(files).reduce((acc: { [key: string]: any }, key: string) => {
-            acc[key] = files[key].map(f => ({ filename: f.filename, mimetype: f.mimetype, encoding: f.encoding, size: f.content.length }));
-            return acc;
-          }, {}),
-        }),
+        statusCode: 302,
+        headers: {
+          Location: "/",
+        },
+        body: "",
       });
     });
 
