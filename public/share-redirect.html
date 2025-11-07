@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Processing Shared Content</title>
+  <script>
+    // This script runs immediately when the page loads
+    const urlParams = new URLSearchParams(window.location.search);
+    const sharedData = {
+      base64: urlParams.get('base64'),
+      filename: urlParams.get('filename'),
+      mimetype: urlParams.get('mimetype'),
+      type: urlParams.get('type') // 'image' or 'audio'
+    };
+
+    if (sharedData.base64 && sharedData.filename && sharedData.mimetype && sharedData.type) {
+      sessionStorage.setItem('sharedContent', JSON.stringify(sharedData));
+    }
+
+    // Redirect to the main application
+    window.location.replace('/');
+  </script>
+</head>
+<body>
+  <p>Processing shared content, please wait...</p>
+</body>
+</html>

@@ -20,7 +20,7 @@ const handler: Handler = async (event) => {
 
     busboy.on("file", (fieldname: string, file: Readable, filename: string, encoding: string, mimetype: string) => {
       let fileContent = "";
-      file.on("data", (data: Buffer) => {
+      file.on("data", (data) => {
         fileContent += data.toString("base64"); // Store as base64
       });
       file.on("end", () => {
