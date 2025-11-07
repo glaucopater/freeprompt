@@ -1,51 +1,12 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Handler } from "@netlify/functions";
 import * as dotenv from "dotenv";
-import * as fs from "fs";
-import * as path from "path";
 import { DEFAULT_GEMINI_MODEL, IMAGE_GENERATION_MODELS } from "./models";
+import { logToFile } from "./utils";
 
 dotenv.config();
 const GOOGLE_API_KEY = process.env.NETLIFY_GOOGLE_API_KEY;
 const DEFAULT_MODEL = DEFAULT_GEMINI_MODEL;
-
-const getCircularReplacer = () => {
-  const seen = new WeakSet();
-  return (key: any, value: any) => {
-    if (typeof value === "object" && value !== null) {
-      if (seen.has(value)) return "[Circular]";
-      seen.add(value);
-    }
-    if (typeof value === "function") return "[Function]";
-    if (key === "dataUri" && typeof value === "string" && value.length > 200) {
-      return `${value.substring(0, 100)}...[TRUNCATED]`;
-    }
-    if (typeof value === "string" && value.length > 1000) {
-      return `${value.substring(0, 500)}...[TRUNCATED]`;
-    }
-    return value;
-  };
-};
-
-const logToFile = (logData: object) => {
-  try {
-    const logDir = path.join(process.cwd(), "netlify", "functions", "logs");
-    fs.mkdirSync(logDir, { recursive: true });
-    const logFile = path.join(logDir, "gemini-generate-images.log");
-    console.log(`Logging to: ${logFile}`);
-    const entry =
-      JSON.stringify(
-        {
-          timestamp: new Date().toISOString(),
-          ...logData,
-        },
-        getCircularReplacer()
-      ) + "\n";
-    fs.appendFileSync(logFile, entry, { encoding: "utf8" });
-  } catch (fileErr: any) {
-    console.log("Failed to write debug log file:", String(fileErr));
-  }
-};
 
 export const handler: Handler = async (event) => {
   const headers = {

@@ -11,20 +11,20 @@ import { ResponseVisionComponent } from "./components/ResponseVisionComponent";
 import { ResponseHearingComponent } from "./components/ResponseHearingComponent";
 
 /**
-* Set up all the event listeners for the page.
-*
-* Adds event listeners to the upload area, file input, upload button,
-* and
-* form. These event listeners handle drag and drop events, file input
-* changes, form submissions, and modal close events.
-*
-* When a file is selected, it is analyzed by sending a POST request to the
-* Netlify function at /.netlify/functions/gemini-vision-upload. The function
-* returns a JSON object with a "message" property, which is displayed in the
-* modal.
-*
-* The modal is also cleared when it is closed.
-*/
+ * Set up all the event listeners for the page.
+ *
+ * Adds event listeners to the upload area, file input, upload button,
+ * and
+ * form. These event listeners handle drag and drop events, file input
+ * changes, form submissions, and modal close events.
+ *
+ * When a file is selected, it is analyzed by sending a POST request to the
+ * Netlify function at /.netlify/functions/gemini-vision-upload. The function
+ * returns a JSON object with a "message" property, which is displayed in the
+ * modal.
+ *
+ * The modal is also cleared when it is closed.
+ */
 
 let eventsAreSetup = false;
 
@@ -48,11 +48,9 @@ export const setupEvents = () => {
     "reset-button"
   )! as HTMLButtonElement;
 
-
   const uploadForm: HTMLFormElement | null = document.getElementById(
     "upload-form"
   ) as HTMLFormElement | null;
-
 
   const analysisAudioResults: HTMLElement | null = document.getElementById(
     "analysis-audio-results"
@@ -225,14 +223,28 @@ export const setupEvents = () => {
   }
 
   // region Generate Media UI handlers
-  const generateButton = document.getElementById("generate-button") as HTMLButtonElement | null;
-  const generateReset = document.getElementById("generate-reset") as HTMLButtonElement | null;
-  const genPrompt = document.getElementById("gen-prompt") as HTMLTextAreaElement | null;
-  const genPromptFixed = document.getElementById("gen-prompt-fixed") as HTMLTextAreaElement | null;
-  const genModel = document.getElementById("gen-model") as HTMLSelectElement | null;
-  const genType = document.getElementById("gen-type") as HTMLSelectElement | null;
-  const generatedMediaContainer = document.getElementById("generated-media") as HTMLElement | null;
-  const generateOutput = document.getElementById("generate-output") as HTMLElement | null;
+  const generateButton = document.getElementById(
+    "generate-button"
+  ) as HTMLButtonElement | null;
+  const generateReset = document.getElementById(
+    "generate-reset"
+  ) as HTMLButtonElement | null;
+  const genPrompt = document.getElementById(
+    "gen-prompt"
+  ) as HTMLTextAreaElement | null;
+  
+  const genModel = document.getElementById(
+    "gen-model"
+  ) as HTMLSelectElement | null;
+  const genType = document.getElementById(
+    "gen-type"
+  ) as HTMLSelectElement | null;
+  const generatedMediaContainer = document.getElementById(
+    "generated-media"
+  ) as HTMLElement | null;
+  const generateOutput = document.getElementById(
+    "generate-output"
+  ) as HTMLElement | null;
 
   generateReset?.addEventListener("click", () => {
     if (genPrompt) genPrompt.value = "";
@@ -241,7 +253,7 @@ export const setupEvents = () => {
   });
 
   generateButton?.addEventListener("click", async () => {
-    if (!genPrompt || !genPromptFixed) return;
+    if (!genPrompt) return;
     let userPrompt = genPrompt.value.trim();
     if (!userPrompt) {
       // minimal validation
@@ -249,27 +261,34 @@ export const setupEvents = () => {
       return;
     }
 
-    if (userPrompt.endsWith('.')) {
+    if (userPrompt.endsWith(".")) {
       userPrompt = userPrompt.slice(0, -1);
     }
 
-    const fixedPrompt = genPromptFixed.value.trim();
-    const combinedPrompt = `${fixedPrompt}\n\n${userPrompt}`;
+    
+    const combinedPrompt = userPrompt;
 
     generateButton.disabled = true;
+
     try {
-      const payload = { prompt: combinedPrompt, model: genModel?.value, type: genType?.value };
-      const response = await fetch(`${FUNCTIONS_PATH}/gemini-generate-images`, {
+      const payload = {
+        prompt: combinedPrompt,
+        model: genModel?.value,
+        type: genType?.value,
+      };
+      const response = await fetch(`${FUNCTIONS_PATH}/reve-generate-images`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
       if (response.status === 429) {
+        const data = await response.json();
         const retry = data.retryAfterSeconds;
-        const msg = `Quota exceeded. Retry after ${retry ? retry + 's' : 'some time'}`;
-        console.warn(msg, data.error);        
+        const msg = `Quota exceeded. Retry after ${
+          retry ? retry + "s" : "some time"
+        }`;
+        console.warn(msg, data.error);
         // If server provided placeholder, show it
         if (data.dataUri && generatedMediaContainer) {
           const img = document.createElement("img");
@@ -284,23 +303,57 @@ export const setupEvents = () => {
       }
 
       if (!response.ok) {
-        throw new Error(data.error || "Generation failed");
+        const r = response.clone();
+        const errorData = await r.json().catch(async () => {
+          const text = await response.text();
+          return { message: text };
+        });
+        throw new Error(
+          (errorData as any).error ||
+            (errorData as any).message ||
+            "Generation failed"
+        );
       }
 
+      console.log("Response status:", response.status, response.statusText);
 
- 
-      let title = "Generated Media";
-      let description = " -";
+      let dataUri: string | null = null;
+      const contentType = response.headers.get("Content-Type");
+      console.log("Received Content-Type:", contentType);
 
-      const regex = /\*\*Title:\*\*\s*(?<title>.+?)\s*\n+\s*\*\*Description:\*\*\s*(?<description>.+)/s;
-      const match = data.message.match(regex);
+      if (contentType && contentType.startsWith("image/")) {
+        const base64Image = await response.text();
+        console.log("Received base64 image (truncated):", base64Image.substring(0, 100) + "...");
+        dataUri = `data:${contentType};base64,${base64Image}`;
+      } else if (contentType && contentType.startsWith("application/json")) {
+        const jsonResponse = await response.json();
+        console.log("Received JSON response:", jsonResponse);
+        dataUri = jsonResponse.dataUri; // Assuming the JSON response has a dataUri field
+      } else {
+        // Handle unexpected content type or error
+        throw new Error(`Unexpected content type: ${contentType}`);
+      }
 
-      if (match && match?.groups) {
-        title = match.groups.title;
-        description = match.groups.description;
-       }
+      console.log("Final data URI (truncated):", dataUri ? dataUri.substring(0, 100) + "..." : "null");
 
-      const { dataUri } = data;
+      const title = "Generated Media";
+      const contentViolation =
+        response.headers.get("X-Reve-Content-Violation") || "";
+      const requestId = response.headers.get("X-Reve-Request-Id") || "";
+      const version = response.headers.get("X-Reve-Version") || "";
+      const creditsUsed = response.headers.get("X-Reve-Credits-Used") || "";
+      const creditsRemaining =
+        response.headers.get("X-Reve-Credits-Remaining") || "";
+
+      const description = [
+        requestId,
+        contentViolation,
+        creditsRemaining,
+        version,
+        creditsUsed,
+      ]
+        .filter(Boolean)
+        .join(", ");
 
       if (generatedMediaContainer) {
         generatedMediaContainer.innerHTML = "";
@@ -313,10 +366,16 @@ export const setupEvents = () => {
         }
 
         if ((genType?.value ?? "image") === "audio") {
-          const audio = document.createElement("audio");
-          audio.controls = true;
-          audio.src = dataUri;
-          generatedMediaContainer.appendChild(audio);
+          if (dataUri) { // Add null check here
+            const audio = document.createElement("audio");
+            audio.controls = true;
+            audio.src = dataUri;
+            generatedMediaContainer.appendChild(audio);
+          } else {
+            const noMediaMessage = document.createElement("p");
+            noMediaMessage.textContent = "No audio generated.";
+            generatedMediaContainer.appendChild(noMediaMessage);
+          }
         } else if (dataUri) {
           const imageCaptionContainer = document.createElement("div");
           imageCaptionContainer.className = "image-caption-container mb-3";
@@ -324,7 +383,7 @@ export const setupEvents = () => {
           const img = document.createElement("img");
           img.className = "img-fluid rounded";
           img.alt = title || "Generated media";
-          img.src = dataUri;
+          img.src = dataUri; // Directly use dataUri
           imageCaptionContainer.appendChild(img);
 
           if (description) {
@@ -338,17 +397,23 @@ export const setupEvents = () => {
 
           const downloadButton = document.createElement("a");
           downloadButton.href = dataUri;
-          const timestamp = new Date().toISOString().replace(/[:.]/g, '-') ;
-          downloadButton.download = title ? `${title.replace(/\s+/g, '_')}.png` : `image_${timestamp}.png`;
+          const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+          downloadButton.download = title
+            ? `${title.replace(/\s+/g, "_")}.png`
+            : `image_${timestamp}.png`;
           downloadButton.className = "btn btn-secondary btn-sm mt-2";
           downloadButton.textContent = "Download Image";
           generatedMediaContainer.appendChild(downloadButton);
+        } else {
+          const noMediaMessage = document.createElement("p");
+          noMediaMessage.textContent = "No image generated.";
+          generatedMediaContainer.appendChild(noMediaMessage);
         }
 
         if (generateOutput) generateOutput.classList.remove("d-none");
       }
     } catch (err) {
-      console.error("Generate error:", err);      
+      console.error("Generate error:", err);
     } finally {
       generateButton.disabled = false;
     }
@@ -433,8 +498,12 @@ export const setupEvents = () => {
   }
 
   async function analyzeFile(file: Blob) {
-    const visionResultsContainer = document.getElementById("analysis-vision-results");
-    const audioResultsContainer = document.getElementById("analysis-audio-results");
+    const visionResultsContainer = document.getElementById(
+      "analysis-vision-results"
+    );
+    const audioResultsContainer = document.getElementById(
+      "analysis-audio-results"
+    );
     const uploadColumn = document.getElementById("upload-column");
     const resultsColumn = document.getElementById("results-column");
 
@@ -462,9 +531,11 @@ export const setupEvents = () => {
       setTimeout(() => {
         resultsContainer.style.display = "block";
         resultsContainer.innerHTML = "";
-        resultsContainer.append(file.type.startsWith("image/")
-          ? ResponseVisionComponent(null)
-          : ResponseHearingComponent(null));
+        resultsContainer.append(
+          file.type.startsWith("image/")
+            ? ResponseVisionComponent(null)
+            : ResponseHearingComponent(null)
+        );
 
         // Trigger fade in
         setTimeout(() => {
@@ -487,12 +558,16 @@ export const setupEvents = () => {
         };
       });
 
-      const modelSelect = document.getElementById("model-select") as HTMLSelectElement;
+      const modelSelect = document.getElementById(
+        "model-select"
+      ) as HTMLSelectElement;
       const selectedModel = modelSelect.value;
 
       if (file.type.startsWith("image/")) {
         // Check auto-shrink toggle
-        const autoShrink = (document.getElementById('auto-shrink-switch') as HTMLInputElement)?.checked ?? true;
+        const autoShrink =
+          (document.getElementById("auto-shrink-switch") as HTMLInputElement)
+            ?.checked ?? true;
 
         let resizedBase64: string;
         let imageStats: {
@@ -519,15 +594,19 @@ export const setupEvents = () => {
           });
 
           if (!resizeResponse.ok) {
-            throw new Error('Failed to resize image');
+            throw new Error("Failed to resize image");
           }
 
           // Parse JSON response from resize-image and extract the base64 and stats
           const resizeJson = await resizeResponse.json();
-          resizedBase64 = resizeJson.resizedImage || resizeJson.data || '';
+          resizedBase64 = resizeJson.resizedImage || resizeJson.data || "";
           imageStats = resizeJson.imageStats || {
-            originalSize: parseInt(resizeResponse.headers.get('X-Original-Size') || '0'),
-            resizedSize: parseInt(resizeResponse.headers.get('X-Resized-Size') || '0'),
+            originalSize: parseInt(
+              resizeResponse.headers.get("X-Original-Size") || "0"
+            ),
+            resizedSize: parseInt(
+              resizeResponse.headers.get("X-Resized-Size") || "0"
+            ),
           };
         } else {
           // Skip resizing; use original base64
@@ -537,16 +616,27 @@ export const setupEvents = () => {
 
           // Derive image dimensions by loading the base64 data URL
           const dataUrl = `data:${file.type};base64,${base64}`;
-          const imgDims = await new Promise<{ width: number | undefined; height: number | undefined }>((resolve) => {
+          const imgDims = await new Promise<{
+            width: number | undefined;
+            height: number | undefined;
+          }>((resolve) => {
             const img = new Image();
-            img.onload = () => resolve({ width: img.naturalWidth || undefined, height: img.naturalHeight || undefined });
-            img.onerror = () => resolve({ width: undefined, height: undefined });
+            img.onload = () =>
+              resolve({
+                width: img.naturalWidth || undefined,
+                height: img.naturalHeight || undefined,
+              });
+            img.onerror = () =>
+              resolve({ width: undefined, height: undefined });
             img.src = dataUrl;
           });
 
           const originalWidth = imgDims.width;
           const originalHeight = imgDims.height;
-          const originalAspectRatio = originalWidth && originalHeight ? originalWidth / originalHeight : undefined;
+          const originalAspectRatio =
+            originalWidth && originalHeight
+              ? originalWidth / originalHeight
+              : undefined;
 
           // When not shrinking, resized values equal original
           const resizedWidth = originalWidth;
@@ -573,13 +663,16 @@ export const setupEvents = () => {
           },
           body: JSON.stringify({
             data: resizedBase64,
-            model: selectedModel
+            model: selectedModel,
           }),
         });
 
         const data = await response.json();
         const metadata = { ...data.metadata, imageStats };
-        const analysisVisionData = parseVisionResponseData(data.message, metadata);
+        const analysisVisionData = parseVisionResponseData(
+          data.message,
+          metadata
+        );
 
         if (resultsContainer) {
           resultsContainer.innerHTML = "";
@@ -587,24 +680,32 @@ export const setupEvents = () => {
           resultsContainer.classList.add("fade-in");
         }
       } else if (file.type.startsWith("audio/")) {
-        const response = await fetch(`${FUNCTIONS_PATH}/gemini-hearing-upload`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            data: base64,
-            model: selectedModel
-          }),
-        });
+        const response = await fetch(
+          `${FUNCTIONS_PATH}/gemini-hearing-upload`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              data: base64,
+              model: selectedModel,
+            }),
+          }
+        );
 
         const data = await response.json();
-        const analysisAudioData = parseAudioResponseData(data.message, data.metadata);
+        const analysisAudioData = parseAudioResponseData(
+          data.message,
+          data.metadata
+        );
 
         if (resultsContainer) {
           resultsContainer.innerHTML = "";
           const audioUrl = URL.createObjectURL(file);
-          resultsContainer.append(ResponseHearingComponent(analysisAudioData, audioUrl));
+          resultsContainer.append(
+            ResponseHearingComponent(analysisAudioData, audioUrl)
+          );
           resultsContainer.classList.add("fade-in");
         }
       }
