@@ -42,7 +42,7 @@ const handler: Handler = async (event) => {
 
       const sharedFile = files.photos && files.photos[0]; // Assuming 'photos' is the fieldname for shared files
 
-      if (sharedFile) {
+      if (sharedFile && sharedFile.mimetype) {
         if (sharedFile.mimetype.startsWith("image/")) {
           const redirectUrl = `/?sharedImage=${encodeURIComponent(sharedFile.content)}&filename=${encodeURIComponent(sharedFile.filename)}&mimetype=${encodeURIComponent(sharedFile.mimetype)}`;
           resolve({
