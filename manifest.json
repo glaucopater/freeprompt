@@ -19,7 +19,7 @@
     }
   ],
   "share_target": {
-    "action": "/share-target/",
+    "action": "https://freeprompt.netlify.app/share-target/",
     "method": "POST",
     "enctype": "multipart/form-data",
     "params": {
