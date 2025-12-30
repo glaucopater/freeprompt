@@ -4,7 +4,7 @@ A hassle-free setup to test LLM API for free
 
 [![Netlify Status](https://api.netlify.com/api/v1/badges/e2bfd1f9-b705-4034-b96a-498b42a4871c/deploy-status)](https://app.netlify.com/sites/freeprompt/deploys)
 
-[Live Demo ⚡](https://freeprompt.netlify.app/)
+[Live Demo](https://freeprompt.netlify.app/)⚡
 
 ## Image classification with Gen AI (Gemini):
 
