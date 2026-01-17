@@ -14,14 +14,21 @@
     Content-Type = "application/javascript"
     Cache-Control = "no-cache"
 
+[[headers]]
+  for = "/assets/*.js"
+  [headers.values]
+    Content-Type = "application/javascript"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  for = "/assets/*.json"
+  [headers.values]
+    Content-Type = "application/json"
+    X-Content-Type-Options = "nosniff"
+
 [[redirects]]
   from = "/service-worker.js"
   to = "/assets/service-worker.js"
-  status = 200
-
-[[redirects]]
-  from = "/*.js"
-  to = "/.js"
   status = 200
 
 [[redirects]]
@@ -33,6 +40,13 @@
   from = "/share-target/*"
   to = "/.netlify/functions/share-target/:splat"
   status = 200
+
+# Exclude assets from SPA fallback
+[[redirects]]
+  from = "/assets/*"
+  to = "/assets/:splat"
+  status = 200
+  force = true
 
 [[redirects]]
   from = "/*"

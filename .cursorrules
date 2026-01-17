@@ -36,3 +36,6 @@ Syntax and Formatting
 - Avoid unnecessary curly braces in conditionals; use concise syntax for simple statements.
 - Use declarative JSX/TSX.
 - Avoid double ternary expression.
+
+Documentation
+- When I tell you "PR desc" create or update a Pull Request documentation file to describe the latest updates related to the current git branch only

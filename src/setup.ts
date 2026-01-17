@@ -472,16 +472,18 @@ export const setupEvents = () => {
                 imagePreview.src = e.target.result as string;
               }
               imagePreview.classList.remove("d-none");
+              if (uploadGuide) {
+                uploadGuide.classList.add("d-none");
+              }
             }
           } else if (file.type.startsWith("audio/")) {
             if (audioPreview) {
               audioPreview.src = e.target.result as string;
               audioPreview.classList.remove("d-none");
+              if (uploadGuide) {
+                uploadGuide.classList.add("d-none");
+              }
             }
-          }
-
-          if (uploadGuide) {
-            uploadGuide.classList.add("d-none");
           }
         };
         reader.readAsDataURL(file);

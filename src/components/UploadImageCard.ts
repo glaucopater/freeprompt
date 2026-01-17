@@ -15,10 +15,10 @@ export const UploadFilesCard = (uploadProgressModal: string) => `
       >
         <div class="upload-area" id="upload-area">
           <p id="upload-guide">Drag and drop a file here or click to upload</p>
-          <p class="file-info" id="file-info"></p>
           <input type="file" id="file-input" name="file" style="display: none" accept="image/*, audio/*" />
-          <img id="image-preview" class="img-fluid mt-3 d-none" alt="Preview" style="max-height: 200px;" />
+          <img id="image-preview" class="upload-preview-image d-none" alt="Preview" />
         </div>
+        <p class="file-info mt-2 text-center" id="file-info"></p>
         <div class="mb-3">
           <label for="model-select" class="form-label">Select Model (sorted by perfomance)</label>
           <select class="form-select" id="model-select" name="model">
