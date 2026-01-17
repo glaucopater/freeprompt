@@ -28,13 +28,18 @@ export const handler: Handler = async (event) => {
 
   if (event.body) {
     const startTime = Date.now();
-    const { data } = JSON.parse(event.body);
+    const { data, mimeType } = JSON.parse(event.body);
     const imageResp = Buffer.from(data, "base64");
+    
+    // Use provided mimeType or default to jpeg
+    // Gemini supports: image/png, image/jpeg, image/webp, image/heic, image/heif
+    const actualMimeType = mimeType || "image/jpeg";
+    
     const result = await model.generateContent([
       {
         inlineData: {
           data: imageResp.toString("base64"),
-          mimeType: "image/jpeg",
+          mimeType: actualMimeType,
         },
       },
       VISION_PROMPTS[0],

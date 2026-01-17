@@ -659,6 +659,7 @@ export const setupEvents = () => {
         }
 
         // Then, send the resized image for analysis
+        // Note: resize-image function always outputs JPEG, so use that mimeType
         const response = await fetch(`${FUNCTIONS_PATH}/gemini-vision-upload`, {
           method: "POST",
           headers: {
@@ -667,6 +668,7 @@ export const setupEvents = () => {
           body: JSON.stringify({
             data: resizedBase64,
             model: selectedModel,
+            mimeType: autoShrink ? "image/jpeg" : file.type, // Resize outputs JPEG; otherwise use original
           }),
         });
 
