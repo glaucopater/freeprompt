@@ -9,27 +9,45 @@
   # Ubuntu Noble 24.04 is the default build image
 
 [[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Pragma = "no-cache"
+    Expires = "0"
+
+[[headers]]
   for = "/service-worker.js"
   [headers.values]
     Content-Type = "application/javascript"
-    Cache-Control = "no-cache"
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Pragma = "no-cache"
+    Expires = "0"
 
 [[headers]]
   for = "/assets/*.js"
   [headers.values]
     Content-Type = "application/javascript"
     X-Content-Type-Options = "nosniff"
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/assets/*.css"
+  [headers.values]
+    Content-Type = "text/css"
+    X-Content-Type-Options = "nosniff"
+    Cache-Control = "public, max-age=31536000, immutable"
 
 [[headers]]
   for = "/assets/*.json"
   [headers.values]
     Content-Type = "application/json"
     X-Content-Type-Options = "nosniff"
+    Cache-Control = "public, max-age=31536000, immutable"
 
-[[redirects]]
-  from = "/service-worker.js"
-  to = "/assets/service-worker.js"
-  status = 200
+[[headers]]
+  for = "/assets/*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
 
 [[redirects]]
   from = "/share-redirect.html"
@@ -41,13 +59,29 @@
   to = "/.netlify/functions/share-target/:splat"
   status = 200
 
-# Exclude assets from SPA fallback
+# Exclude assets from SPA fallback - must come before catch-all
+# This handles all assets including manifest.json, CSS, JS files
 [[redirects]]
   from = "/assets/*"
   to = "/assets/:splat"
   status = 200
   force = true
 
+# Exclude service worker from SPA fallback
+[[redirects]]
+  from = "/service-worker.js"
+  to = "/service-worker.js"
+  status = 200
+  force = true
+
+# Exclude favicon from SPA fallback
+[[redirects]]
+  from = "/favicon.png"
+  to = "/favicon.png"
+  status = 200
+  force = true
+
+# SPA fallback - must be last
 [[redirects]]
   from = "/*"
   to = "/index.html"
