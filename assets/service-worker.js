@@ -28,6 +28,18 @@ self.addEventListener('install', (event) => {
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
+  } else if (event.data && event.data.type === 'PING') {
+    // Respond to ping to confirm service worker is active
+    self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(clients => {
+      if (clients.length > 0) {
+        clients[0].postMessage({
+          type: 'DEBUG_MESSAGE',
+          prefix: 'SW',
+          message: 'Service Worker is active and responding to PING',
+          data: { state: 'active' }
+        });
+      }
+    }).catch(() => {});
   }
 });
 
@@ -36,9 +48,28 @@ self.addEventListener('fetch', (event) => {
   const requestOrigin = url.origin;
   const requestPath = url.pathname;
   
-  // Debug: Log all POST requests to see if they're reaching the service worker
+  // CRITICAL: Handle Web Share Target API POST requests FIRST
+  // This must be checked before ANY other handlers, including Netlify function checks
+  // The path might be '/share-target/' or '/share-target' (with or without trailing slash)
+  if (event.request.method === 'POST' && (requestPath === '/share-target/' || requestPath === '/share-target')) {
+    // Send debug message immediately
+    self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(clients => {
+      if (clients.length > 0) {
+        clients[0].postMessage({
+          type: 'DEBUG_MESSAGE',
+          prefix: 'SW',
+          message: '✅ Share target POST intercepted!',
+          data: { path: requestPath, url: event.request.url, resultingClientId: event.resultingClientId }
+        });
+      }
+    }).catch(() => {});
+    // MUST call respondWith to intercept the request
+    event.respondWith(handleShareTarget(event));
+    return; // Exit early - don't process further
+  }
+  
+  // Debug: Log ALL POST requests to see what's happening
   if (event.request.method === 'POST') {
-    // Send debug message to client if available
     self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(clients => {
       if (clients.length > 0) {
         clients[0].postMessage({
@@ -49,7 +80,10 @@ self.addEventListener('fetch', (event) => {
             method: event.request.method,
             path: requestPath,
             origin: requestOrigin,
-            url: event.request.url
+            url: event.request.url,
+            mode: event.request.mode,
+            credentials: event.request.credentials,
+            intercepted: false
           }
         });
       }
@@ -59,38 +93,6 @@ self.addEventListener('fetch', (event) => {
   // Skip Netlify function calls - they should never be cached
   if (requestPath.startsWith('/.netlify/functions/')) {
     return;
-  }
-  
-  // Handle Web Share Target API POST requests
-  // This must be checked before other fetch handlers
-  if (event.request.method === 'POST' && requestPath === '/share-target/') {
-    // Send debug message
-    self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(clients => {
-      if (clients.length > 0) {
-        clients[0].postMessage({
-          type: 'DEBUG_MESSAGE',
-          prefix: 'SW',
-          message: 'Share target POST intercepted!',
-          data: { path: requestPath }
-        });
-      }
-    }).catch(() => {});
-    event.respondWith(handleShareTarget(event));
-    return;
-  }
-  
-  // Debug: Log if POST request to share-target but path doesn't match
-  if (event.request.method === 'POST' && requestPath.includes('share-target')) {
-    self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(clients => {
-      if (clients.length > 0) {
-        clients[0].postMessage({
-          type: 'DEBUG_MESSAGE',
-          prefix: 'SW',
-          message: `POST to share-target but path mismatch: ${requestPath}`,
-          data: { expected: '/share-target/', actual: requestPath }
-        });
-      }
-    }).catch(() => {});
   }
   
   // Get the service worker's origin from registration scope
@@ -151,13 +153,50 @@ async function handleShareTarget(event) {
     const title = formData.get('title');
     const urlParam = formData.get('url');
     
-    // Generate a unique ID for this share session
-    const shareId = `share_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    // Get the client that will receive the response (the new window opened by share target)
+    // Use event.resultingClientId if available, otherwise fall back to matching all clients
+    let targetClient = null;
+    if (event.resultingClientId) {
+      try {
+        targetClient = await self.clients.get(event.resultingClientId);
+        if (targetClient) {
+          targetClient.postMessage({
+            type: 'DEBUG_MESSAGE',
+            prefix: 'SW',
+            message: 'Found client via resultingClientId',
+            data: { resultingClientId: event.resultingClientId }
+          });
+        }
+      } catch {
+        // If we can't get the specific client, try to match all clients
+        const allClients = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
+        if (allClients.length > 0) {
+          targetClient = allClients[0];
+          targetClient.postMessage({
+            type: 'DEBUG_MESSAGE',
+            prefix: 'SW',
+            message: 'Fallback: using first available client',
+            data: { clientsCount: allClients.length }
+          });
+        }
+      }
+    } else {
+      // Fallback: get any available client
+      const allClients = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
+      if (allClients.length > 0) {
+        targetClient = allClients[0];
+        targetClient.postMessage({
+          type: 'DEBUG_MESSAGE',
+          prefix: 'SW',
+          message: 'No resultingClientId, using first available client',
+          data: { clientsCount: allClients.length }
+        });
+      }
+    }
     
-    // Get clients early for debug messages
-    const clients = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
-    if (clients.length > 0) {
-      clients[0].postMessage({
+    // Send debug message about form data
+    if (targetClient) {
+      targetClient.postMessage({
         type: 'DEBUG_MESSAGE',
         prefix: 'SW',
         message: 'Form data received',
@@ -168,111 +207,74 @@ async function handleShareTarget(event) {
           fileSize: file instanceof File ? file.size : 0,
           text: text || 'none',
           title: title || 'none',
-          url: urlParam || 'none',
-          shareId: shareId
+          url: urlParam || 'none'
         }
       });
     }
     
-    // Store file data in IndexedDB to avoid URL length limits
-    // This is more robust for large files (images, audio)
-    let fileData = null;
-    if (file && file instanceof File) {
-      // Check file size - warn if very large (>10MB)
-      const maxSize = 10 * 1024 * 1024; // 10MB
-      if (file.size > maxSize && clients.length > 0) {
-        clients[0].postMessage({
+    // Forward file object directly to the app window via postMessage
+    // File objects CAN be transferred via postMessage (they're supported by structured clone)
+    if (targetClient && file && file instanceof File) {
+      try {
+        // Send the File object directly - it can be transferred via postMessage
+        targetClient.postMessage({
+          type: 'SHARED_CONTENT',
+          file: file, // File object passes fully via structured clone
+          text: text || null,
+          title: title || null,
+          url: urlParam || null
+        });
+        
+        targetClient.postMessage({
           type: 'DEBUG_MESSAGE',
           prefix: 'SW',
-          message: `Large file detected: ${file.size} bytes. Processing may be slow.`,
-          data: { fileSize: file.size }
+          message: `✅ File forwarded to app: ${file.name} (${file.size} bytes)`,
+          data: { fileName: file.name, fileSize: file.size, fileType: file.type }
         });
+      } catch (e) {
+        // If File object can't be transferred, log error
+        // e is used in the error message below
+        if (targetClient) {
+          targetClient.postMessage({
+            type: 'DEBUG_MESSAGE',
+            prefix: 'SW',
+            message: `❌ Error forwarding file: ${e.message || String(e)}`,
+            data: { error: e.message || String(e) }
+          });
+        }
       }
-      
-      // Convert file to base64 for storage
-      const arrayBuffer = await file.arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
-      let binary = '';
-      // Process in chunks to avoid blocking
-      const chunkSize = 8192; // 8KB chunks
-      for (let i = 0; i < bytes.length; i += chunkSize) {
-        const chunk = bytes.slice(i, i + chunkSize);
-        binary += String.fromCharCode.apply(null, chunk);
-      }
-      const base64 = btoa(binary);
-      
-      fileData = {
-        base64: base64,
-        filename: file.name,
-        mimetype: file.type,
-        size: file.size,
-        type: file.type.startsWith('image/') ? 'image' : 
-              file.type.startsWith('audio/') ? 'audio' : 'unknown'
-      };
-      
-      // Store in IndexedDB
-      await storeShareData(shareId, {
-        file: fileData,
-        text: text || null,
-        title: title || null,
-        url: urlParam || null,
-        timestamp: Date.now()
-      });
-      if (clients.length > 0) {
-        clients[0].postMessage({
-          type: 'DEBUG_MESSAGE',
-          prefix: 'SW',
-          message: 'File data stored successfully',
-          data: { shareId, fileName: fileData.filename }
-        });
-      }
-    } else {
-      // Store text-only share
-      await storeShareData(shareId, {
+    } else if (targetClient && (text || title || urlParam)) {
+      // Text-only share
+      targetClient.postMessage({
+        type: 'SHARED_CONTENT',
         file: null,
         text: text || null,
         title: title || null,
-        url: urlParam || null,
-        timestamp: Date.now()
+        url: urlParam || null
       });
-      if (clients.length > 0) {
-        clients[0].postMessage({
+      
+      targetClient.postMessage({
+        type: 'DEBUG_MESSAGE',
+        prefix: 'SW',
+        message: 'Text-only share forwarded to app',
+        data: { text: text || 'none', title: title || 'none' }
+      });
+    } else {
+      // No client available or no data
+      if (targetClient) {
+        targetClient.postMessage({
           type: 'DEBUG_MESSAGE',
           prefix: 'SW',
-          message: 'Text-only share stored successfully',
-          data: { shareId }
+          message: '⚠️ No file or text data to forward',
+          data: { hasFile: !!file, hasText: !!text, hasClient: !!targetClient }
         });
       }
     }
     
-    // Build redirect URL with share ID (not file data)
+    // Redirect to app (this opens the app window)
     const redirectUrl = new URL('/', self.location.origin);
-    redirectUrl.searchParams.set('shareId', shareId);
-    
-    // Notify open clients about the shared content (clients already fetched above)
-    if (clients.length > 0) {
-      // If there's an open client, send message with share ID
-      clients[0].postMessage({
-        type: 'SHARED_CONTENT',
-        shareId: shareId,
-        file: fileData ? {
-          name: fileData.filename,
-          type: fileData.mimetype,
-          size: fileData.size
-        } : null,
-        text: text,
-        title: title,
-        url: urlParam
-      });
-      // Send debug message
-      clients[0].postMessage({
-        type: 'DEBUG_MESSAGE',
-        prefix: 'SW',
-        message: `Share processed: ${fileData ? fileData.filename : 'text-only'}`,
-        data: { shareId, hasFile: !!fileData }
-      });
-      await clients[0].focus();
-      clients[0].postMessage({
+    if (targetClient) {
+      targetClient.postMessage({
         type: 'DEBUG_MESSAGE',
         prefix: 'SW',
         message: `Redirecting to: ${redirectUrl.toString()}`,
@@ -280,17 +282,30 @@ async function handleShareTarget(event) {
       });
     }
     
-    // Redirect to app with share ID
     return Response.redirect(redirectUrl.toString(), 303);
   } catch (error) {
     console.error('Error handling share target:', error);
+    // Try to send error to client
+    try {
+      const clients = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
+      if (clients.length > 0) {
+        clients[0].postMessage({
+          type: 'DEBUG_MESSAGE',
+          prefix: 'SW',
+          message: `❌ Error handling share target: ${error.message || String(error)}`,
+          data: { error: error.message || String(error) }
+        });
+      }
+    } catch {
+      // Ignore
+    }
     // Redirect to app even on error
     return Response.redirect(new URL('/', self.location.origin).toString(), 303);
   }
 }
 
-// Store share data in IndexedDB
-async function storeShareData(shareId, data) {
+// Store share data in IndexedDB (not used - kept for potential future use)
+async function _storeShareData(shareId, data) {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open('ShareTargetDB', 1);
     
@@ -364,6 +379,18 @@ async function storeShareData(shareId, data) {
 }
 
 self.addEventListener('activate', (event) => {
+  // Send debug message
+  self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(clients => {
+    if (clients.length > 0) {
+      clients[0].postMessage({
+        type: 'DEBUG_MESSAGE',
+        prefix: 'SW',
+        message: 'Service Worker activating...',
+        data: { cacheName: CACHE_NAME }
+      });
+    }
+  }).catch(() => {});
+  
   // Clean up old caches: delete all caches that don't match the current cache name
   // This ensures new deployments automatically invalidate prior PWA caches
   event.waitUntil(
@@ -378,7 +405,19 @@ self.addEventListener('activate', (event) => {
       );
     }).then(() => {
       // Take control of all clients immediately
-      return self.clients.claim();
+      return self.clients.claim().then(() => {
+        // Send confirmation
+        return self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(clients => {
+          if (clients.length > 0) {
+            clients[0].postMessage({
+              type: 'DEBUG_MESSAGE',
+              prefix: 'SW',
+              message: '✅ Service Worker activated and claimed clients',
+              data: { clientsCount: clients.length }
+            });
+          }
+        });
+      });
     })
   );
 });

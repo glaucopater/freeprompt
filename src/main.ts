@@ -2,11 +2,16 @@ import "./style.css";
 import { updateHealthcheckStatusInterval, setupEvents } from "./setup.ts";
 import { addDebugMessage } from "./utils/debug-panel.ts";
 
+// Initialize debug panel IMMEDIATELY (before anything else)
+// The debug panel is auto-initialized on first addDebugMessage call
+addDebugMessage('APP', 'Main script loading...');
+
 // Debug: Check service worker registration status
 if ('serviceWorker' in navigator) {
   // Listen for service worker registration events
-  window.addEventListener('sw-registered', (event: any) => {
-    const registration = event.detail;
+  window.addEventListener('sw-registered', (event: Event) => {
+    const customEvent = event as CustomEvent;
+    const registration = customEvent.detail;
     addDebugMessage('APP', 'Service Worker registered', {
       scope: registration.scope,
       active: !!registration.active,
@@ -19,8 +24,9 @@ if ('serviceWorker' in navigator) {
     addDebugMessage('APP', '✅ Service Worker activated');
   });
   
-  window.addEventListener('sw-error', (event: any) => {
-    addDebugMessage('APP', '❌ Service Worker registration failed', { error: String(event.detail) });
+  window.addEventListener('sw-error', (event: Event) => {
+    const customEvent = event as CustomEvent;
+    addDebugMessage('APP', '❌ Service Worker registration failed', { error: String(customEvent.detail) });
   });
   
   navigator.serviceWorker.ready.then(registration => {
@@ -50,6 +56,22 @@ if ('serviceWorker' in navigator) {
       hasController: !!navigator.serviceWorker.controller
     });
   });
+  
+  // Ping service worker to confirm it's active
+  setTimeout(() => {
+    if (navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'PING' });
+      addDebugMessage('APP', 'Sent PING to service worker');
+    } else {
+      addDebugMessage('APP', '⚠️ Cannot ping service worker - no controller');
+    }
+  }, 1000);
+  
+  // Check URL for share target indicators
+  const currentUrl = window.location.href;
+  if (currentUrl.includes('share-target') || currentUrl.includes('shareId')) {
+    addDebugMessage('APP', 'Share target URL detected', { url: currentUrl });
+  }
 }
 
 import appDetails from "../package.json";
@@ -417,39 +439,82 @@ window.addEventListener('load', () => {
   }
 });
 
-// Listen for postMessage from service worker (for share target when app is already open)
+// CRITICAL: Set up service worker message listener IMMEDIATELY
+// This must be done before any other code runs, so messages aren't missed
+if ('serviceWorker' in navigator) {
+  addDebugMessage('APP', 'Setting up service worker message listener...');
+  
+  // Listen for messages from service worker (for share target)
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    addDebugMessage('APP', 'Service worker message received', { 
+      type: event.data?.type,
+      hasData: !!event.data 
+    });
+    // Handle debug messages from service worker
+    if (event.data && event.data.type === 'DEBUG_MESSAGE') {
+      addDebugMessage(event.data.prefix || 'SW', event.data.message, event.data.data);
+      return;
+    }
+    
+    // Process SHARED_CONTENT messages with direct file object
+    if (event.data && event.data.type === 'SHARED_CONTENT') {
+      const file = event.data.file;
+      const text = event.data.text;
+      const title = event.data.title;
+      const urlParam = event.data.url;
+      
+      addDebugMessage('APP', 'SHARED_CONTENT received from service worker', {
+        hasFile: !!file,
+        fileName: file instanceof File ? file.name : 'N/A',
+        fileSize: file instanceof File ? file.size : 0,
+        fileType: file instanceof File ? file.type : 'N/A',
+        hasText: !!text,
+        hasTitle: !!title,
+        hasUrl: !!urlParam
+      });
+      
+      if (file && file instanceof File) {
+        // File object received directly - process it immediately
+        addDebugMessage('APP', `Processing file directly: ${file.name}`);
+        const fileInput = document.getElementById("file-input") as HTMLInputElement;
+        if (fileInput) {
+          // Create a FileList with the shared file
+          const dataTransfer = new DataTransfer();
+          dataTransfer.items.add(file);
+          fileInput.files = dataTransfer.files;
+          
+          // Dispatch change event to trigger existing upload handlers
+          fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+          addDebugMessage('APP', `✅ File added to input: ${file.name} (${file.size} bytes)`);
+        } else {
+          addDebugMessage('APP', '❌ File input element not found');
+        }
+      } else if (text || title || urlParam) {
+        // Text-only share - could be handled separately if needed
+        addDebugMessage('APP', 'Text-only share received', { text, title, url: urlParam });
+      } else {
+        addDebugMessage('APP', '⚠️ SHARED_CONTENT received but no file or text data');
+      }
+      return;
+    }
+  });
+}
+
+// Also listen for window messages (for compatibility)
 window.addEventListener('message', (event) => {
   // Handle debug messages from service worker
   if (event.data && event.data.type === 'DEBUG_MESSAGE') {
     addDebugMessage(event.data.prefix || 'SW', event.data.message, event.data.data);
     return;
   }
-  addDebugMessage('APP', 'Received message', { type: event.data?.type });
-  // Process messages from service worker (share target)
+  
+  // Process SHARED_CONTENT messages (fallback for window messages)
   if (event.data && event.data.type === 'SHARED_CONTENT') {
-    const shareId = event.data.shareId;
-    addDebugMessage('APP', `SHARED_CONTENT received: ${shareId}`);
-    if (shareId) {
-      getShareData(shareId).then((shareData) => {
-        const shareInfo = {
-          hasData: !!shareData,
-          hasFile: !!(shareData && shareData.file),
-          fileName: shareData?.file?.filename || 'N/A'
-        };
-        addDebugMessage('APP', 'Retrieved from postMessage', shareInfo);
-        if (shareData && shareData.file) {
-          addDebugMessage('APP', `Processing file: ${shareData.file.filename}`);
-          processSharedFile(shareData.file);
-        } else {
-          addDebugMessage('APP', 'No file data from postMessage');
-        }
-      }).catch((error) => {
-        console.error('[APP] Error retrieving share data from postMessage:', error);
-        addDebugMessage('APP', `Error: ${error.message || String(error)}`);
-      });
-    } else {
-      addDebugMessage('APP', 'No shareId in message');
-    }
+    addDebugMessage('APP', 'SHARED_CONTENT received via window message', { 
+      hasFile: !!(event.data.file),
+      hasText: !!event.data.text 
+    });
+    // The navigator.serviceWorker message handler above will handle the actual processing
   }
 });
 setupEvents();
