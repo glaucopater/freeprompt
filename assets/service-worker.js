@@ -1,13 +1,20 @@
-const CACHE_NAME = 'freeprompt-cache-v1';
+// Cache versioning: Use build-time version or commit ref for automatic cache invalidation
+// Netlify provides COMMIT_REF, or we can use a timestamp-based version
+// This ensures new deployments automatically invalidate old caches
+const CACHE_VERSION = 'v1'; // This will be replaced at build time with actual version
+const CACHE_NAME = `freeprompt-cache-${CACHE_VERSION}`;
+
+// Don't cache index.html - it changes with each build and contains asset hashes
+// Caching it causes 404s when old HTML references new asset hashes
 const urlsToCache = [
-  '/',
-  '/index.html',
   '/favicon.png',
   '/images/logo-no-bg.png',
-  // Add other assets you want to cache
+  // Add other static assets you want to cache
 ];
 
 self.addEventListener('install', (event) => {
+  // Force the new service worker to activate immediately
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
@@ -50,35 +57,48 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
+  // Only intercept navigation requests (HTML pages)
+  // Let the browser handle all asset requests (JS, CSS, images, etc.) directly
+  // This prevents the service worker from interfering with asset loading
+  const isNavigationRequest = event.request.mode === 'navigate' || 
+                              requestPath === '/' || 
+                              requestPath === '/index.html';
+  
+  if (!isNavigationRequest) {
+    // Don't intercept asset requests - let browser handle them directly
+    return;
+  }
+
+  // Network-first strategy for navigation requests (HTML pages)
+  // This ensures we always get the latest HTML with correct asset hashes
   event.respondWith(
-    caches.match(event.request)
+    fetch(event.request)
       .then((response) => {
-        if (response) {
-          return response;
-        }
-        return fetch(event.request).catch((error) => {
-          // Re-throw the error so the browser can handle it
-          throw error;
-        });
+        return response;
       })
-      .catch((error) => {
-        // Re-throw to let the browser handle the error
-        throw error;
+      .catch((_error) => {
+        // Fallback to cache only if network fails completely
+        return caches.match(event.request);
       })
   );
 });
 
 self.addEventListener('activate', (event) => {
-  const cacheWhitelist = [CACHE_NAME];
+  // Clean up old caches: delete all caches that don't match the current cache name
+  // This ensures new deployments automatically invalidate prior PWA caches
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
+          // Delete all caches that don't match the current cache name
+          if (cacheName !== CACHE_NAME) {
             return caches.delete(cacheName);
           }
         })
       );
+    }).then(() => {
+      // Take control of all clients immediately
+      return self.clients.claim();
     })
   );
 });

@@ -1,5 +1,7 @@
 /// <reference types="vitest/config" />
 import { createHtmlPlugin } from "vite-plugin-html";
+import { readFileSync, writeFileSync } from "fs";
+import { join } from "path";
 
 import { defineConfig, loadEnv } from "vite";
 
@@ -56,6 +58,31 @@ export default defineConfig(({ mode }) => {
           ],
         },
       }),
+      // Plugin to inject cache version into service worker
+      {
+        name: "inject-cache-version",
+        writeBundle() {
+          // Get version from Netlify COMMIT_REF, package.json version, or timestamp
+          const cacheVersion = 
+            env.COMMIT_REF?.substring(0, 7) || // Netlify commit ref (first 7 chars)
+            env.CONTEXT === "production" ? env.COMMIT_REF?.substring(0, 7) : 
+            process.env.npm_package_version || 
+            Date.now().toString(36); // Fallback to timestamp-based version
+          
+          const swPath = join(process.cwd(), "dist", "service-worker.js");
+          try {
+            let swContent = readFileSync(swPath, "utf-8");
+            // Replace the cache version placeholder
+            swContent = swContent.replace(
+              /const CACHE_VERSION = ['"](.*?)['"];?/,
+              `const CACHE_VERSION = '${cacheVersion}';`
+            );
+            writeFileSync(swPath, swContent, "utf-8");
+          } catch (error) {
+            console.warn("Failed to inject cache version into service worker:", error);
+          }
+        },
+      },
     ],
   };
 });
