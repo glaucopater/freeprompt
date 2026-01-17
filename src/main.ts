@@ -1,22 +1,15 @@
 import "./style.css";
 import { updateHealthcheckStatusInterval, setupEvents } from "./setup.ts";
 import { addDebugMessage } from "./utils/debug-panel.ts";
-
-// IMMEDIATE DEBUG: Log URL and sessionStorage state at the very start
-// This helps debug share target issues
-console.warn('[SHARE DEBUG] Page loaded with URL:', window.location.href);
-console.warn('[SHARE DEBUG] Search params:', window.location.search);
-console.warn('[SHARE DEBUG] SessionStorage sharedContent:', sessionStorage.getItem('sharedContent') ? 'EXISTS' : 'EMPTY');
-console.warn('[SHARE DEBUG] All sessionStorage keys:', Object.keys(sessionStorage));
-
-// Also check localStorage in case it ended up there
-console.warn('[SHARE DEBUG] All localStorage keys:', Object.keys(localStorage));
+import { DEBUG_ENABLED, debugLog } from "./utils/debug.ts";
 
 // ============================================
 // VISIBLE DEBUG PANEL FOR MOBILE TESTING
 // Shows debug info directly on the page
+// Only active when VITE_ENABLE_DEBUG=true
 // ============================================
 function showMobileDebug(message: string, data?: Record<string, unknown>) {
+  if (!DEBUG_ENABLED) return;
   let debugDiv = document.getElementById('mobile-debug-panel');
   if (!debugDiv) {
     debugDiv = document.createElement('div');
@@ -58,7 +51,13 @@ function showMobileDebug(message: string, data?: Record<string, unknown>) {
   debugDiv.appendChild(line);
 }
 
-// Show initial page state
+// Debug initialization - only runs when DEBUG_ENABLED
+if (DEBUG_ENABLED) {
+  debugLog('SHARE', 'Page loaded with URL: ' + window.location.href);
+  debugLog('SHARE', 'Search params: ' + window.location.search);
+}
+
+// Show initial page state (showMobileDebug already checks DEBUG_ENABLED)
 showMobileDebug('PAGE LOADED', {
   url: window.location.href,
   search: window.location.search,
@@ -84,8 +83,7 @@ if ('caches' in window) {
   });
 }
 
-// Expose showMobileDebug globally for use elsewhere
-(window as unknown as { showMobileDebug: typeof showMobileDebug }).showMobileDebug = showMobileDebug;
+// Note: showMobileDebug is only used internally and checks DEBUG_ENABLED
 
 // Wait for DOM to be ready before initializing debug panel
 // The debug panel needs document.body to exist
@@ -546,20 +544,20 @@ const SHARE_URL_PREFIX = '/shared-media/';
 // Check for shared files in cache (Google Chrome sample pattern)
 // This is called when the app loads with ?share=true query parameter
 async function checkForSharedFiles() {
-  console.warn('[SHARE DEBUG] checkForSharedFiles called');
+  debugLog('SHARE', 'checkForSharedFiles called');
   showMobileDebug('checkForSharedFiles called');
   addDebugMessage('APP', 'Checking for shared files in cache...');
   
   try {
     // First, list all caches to see what exists
     const allCacheNames = await caches.keys();
-    console.warn('[SHARE DEBUG] All cache names:', allCacheNames);
+    debugLog('SHARE', 'All cache names: ' + allCacheNames.join(', '));
     showMobileDebug('All caches', { names: allCacheNames });
     
     const cache = await caches.open(SHARE_CACHE_NAME);
     const keys = await cache.keys();
     
-    console.warn('[SHARE DEBUG] Share cache keys:', keys.map(r => r.url));
+    debugLog('SHARE', 'Share cache keys: ' + keys.map(r => r.url).join(', '));
     showMobileDebug('Share cache contents', { 
       count: keys.length,
       urls: keys.map(r => r.url)
@@ -635,13 +633,13 @@ async function checkForSharedFiles() {
 // Check for shared files from sessionStorage (Netlify function fallback)
 // The Netlify function stores file in sessionStorage when SW isn't installed
 function checkSessionStorageForSharedFiles() {
-  console.warn('[SHARE DEBUG] checkSessionStorageForSharedFiles called');
+  debugLog('SHARE', 'checkSessionStorageForSharedFiles called');
   showMobileDebug('checkSessionStorageForSharedFiles called');
   addDebugMessage('APP', 'Checking sessionStorage for shared files...');
   
   try {
     const sharedContentStr = sessionStorage.getItem('sharedContent');
-    console.warn('[SHARE DEBUG] sessionStorage sharedContent:', sharedContentStr ? `Found (${sharedContentStr.length} chars)` : 'NOT FOUND');
+    debugLog('SHARE', 'sessionStorage sharedContent: ' + (sharedContentStr ? `Found (${sharedContentStr.length} chars)` : 'NOT FOUND'));
     showMobileDebug('sessionStorage.sharedContent', { 
       exists: !!sharedContentStr,
       length: sharedContentStr?.length || 0
@@ -704,7 +702,7 @@ function checkSessionStorageForSharedFiles() {
 // Service worker redirects to /?share=true, Netlify function redirects to /?shared=true
 const hasShareParam = window.location.search.includes('share=true') || window.location.search.includes('shared=true');
 
-console.warn('[SHARE DEBUG] hasShareParam:', hasShareParam, 'search:', window.location.search);
+debugLog('SHARE', `hasShareParam: ${hasShareParam}, search: ${window.location.search}`);
 showMobileDebug('SHARE PARAM CHECK', { 
   hasShareParam, 
   search: window.location.search,
@@ -713,7 +711,7 @@ showMobileDebug('SHARE PARAM CHECK', {
 
 if (hasShareParam) {
   showMobileDebug('✅ SHARE PARAM DETECTED - Starting file check...');
-  console.warn('[SHARE DEBUG] Share param detected! Checking for shared files...');
+  debugLog('SHARE', 'Share param detected! Checking for shared files...');
   addDebugMessage('APP', 'Share redirect detected', { url: window.location.search });
   
   // First, check sessionStorage (from Netlify function fallback)

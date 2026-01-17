@@ -1,7 +1,7 @@
 // Cache versioning: Use build-time version or commit ref for automatic cache invalidation
 // Netlify provides COMMIT_REF, or we can use a timestamp-based version
 // This ensures new deployments automatically invalidate old caches
-const CACHE_VERSION = 'v3-hash-fix'; // This will be replaced at build time with actual version
+const CACHE_VERSION = 'v4-debug-cleanup'; // Cache version for deployment
 const CACHE_NAME = `freeprompt-cache-${CACHE_VERSION}`;
 
 // Cache name for shared files (separate from app cache)
@@ -27,10 +27,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.warn('Opened cache');
-        return cache.addAll(urlsToCache);
-      })
+      .then((cache) => cache.addAll(urlsToCache))
   );
 });
 
@@ -38,18 +35,6 @@ self.addEventListener('install', (event) => {
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
-  } else if (event.data && event.data.type === 'PING') {
-    // Respond to ping to confirm service worker is active
-    self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(clients => {
-      if (clients.length > 0) {
-        clients[0].postMessage({
-          type: 'DEBUG_MESSAGE',
-          prefix: 'SW',
-          message: 'Service Worker is active and responding to PING',
-          data: { state: 'active' }
-        });
-      }
-    }).catch(() => {});
   }
 });
 
@@ -57,74 +42,31 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   const requestPath = url.pathname;
   
-  // DEBUG: Log all fetch requests to /share-target/
-  if (requestPath.includes('share-target')) {
-    console.warn('[SW FETCH] Share target request detected:', {
-      method: event.request.method,
-      path: requestPath,
-      url: event.request.url
-    });
-  }
-  
-  // CRITICAL: Handle Web Share Target API POST requests ONLY
+  // Handle Web Share Target API POST requests ONLY
   // EXACT match + POST only - this prevents interfering with normal app assets
-  // This must be checked FIRST before any other fetch handling
-  if (event.request.method === 'POST' && requestPath === '/share-target/') {
-    console.warn('[SW FETCH] Intercepting POST to /share-target/');
-    // MUST call respondWith to intercept the request immediately
-    event.respondWith(handleShareTarget(event));
-    return; // Exit early - don't process further
-  }
-  
-  // Also intercept without trailing slash just in case
-  if (event.request.method === 'POST' && requestPath === '/share-target') {
-    console.warn('[SW FETCH] Intercepting POST to /share-target (no trailing slash)');
+  if (event.request.method === 'POST' && (requestPath === '/share-target/' || requestPath === '/share-target')) {
     event.respondWith(handleShareTarget(event));
     return;
   }
   
   // Let ALL other fetches pass normally (don't intercept)
-  // This prevents the service worker from interfering with asset loading
-  // and avoids infinite redirect loops
 });
 
 // Handle Web Share Target API POST requests
-// Based on Google Chrome web-share sample pattern:
-// https://github.com/GoogleChrome/samples/blob/gh-pages/web-share/src/js/service-worker.js
-// Key insight: Store files in Cache API FIRST, then redirect. App reads from cache on load.
+// Based on Google Chrome web-share sample pattern
+// Store files in Cache API FIRST, then redirect. App reads from cache on load.
 async function handleShareTarget(event) {
-  console.warn('[SW handleShareTarget] Starting to process share target request');
-  
   try {
     // Notify app that we're processing a shared file
     if (broadcastChannel) {
       broadcastChannel.postMessage({ type: 'SHARE_STARTED', message: 'Saving shared media...' });
     }
     
-    console.warn('[SW handleShareTarget] Getting form data...');
     const formData = await event.request.formData();
-    
-    // Log all form data entries for debugging
-    const formEntries = [];
-    for (const [key, value] of formData.entries()) {
-      if (value instanceof File) {
-        formEntries.push({ key, type: 'File', name: value.name, size: value.size, mimeType: value.type });
-      } else {
-        formEntries.push({ key, type: 'string', value: String(value).substring(0, 100) });
-      }
-    }
-    console.warn('[SW handleShareTarget] Form data entries:', formEntries);
-    
     const mediaFile = formData.get('photos'); // Matches manifest.json param name
-    console.warn('[SW handleShareTarget] mediaFile from photos field:', mediaFile ? {
-      isFile: mediaFile instanceof File,
-      name: mediaFile instanceof File ? mediaFile.name : 'N/A',
-      size: mediaFile instanceof File ? mediaFile.size : 'N/A',
-      type: mediaFile instanceof File ? mediaFile.type : typeof mediaFile
-    } : 'null/undefined');
     
     if (mediaFile && mediaFile instanceof File && mediaFile.name) {
-      // Store the shared file in cache (same pattern as Google Chrome sample)
+      // Store the shared file in cache
       const cache = await caches.open(SHARE_CACHE_NAME);
       
       // Create a unique cache key using URL prefix + timestamp + filename
@@ -143,8 +85,6 @@ async function handleShareTarget(event) {
           },
         })
       );
-      
-      console.warn('SW: File stored in cache:', cacheKey);
       
       // Notify app that file was saved successfully
       if (broadcastChannel) {
@@ -253,18 +193,6 @@ async function _storeShareData(shareId, data) {
 }
 
 self.addEventListener('activate', (event) => {
-  // Send debug message
-  self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(clients => {
-    if (clients.length > 0) {
-      clients[0].postMessage({
-        type: 'DEBUG_MESSAGE',
-        prefix: 'SW',
-        message: 'Service Worker activating...',
-        data: { cacheName: CACHE_NAME }
-      });
-    }
-  }).catch(() => {});
-  
   // Clean up old caches: delete all caches that don't match the current cache name
   // IMPORTANT: Keep the share cache (SHARE_CACHE_NAME) for share target functionality!
   event.waitUntil(
@@ -273,26 +201,13 @@ self.addEventListener('activate', (event) => {
         cacheNames.map((cacheName) => {
           // Delete old app caches, but KEEP the share cache!
           if (cacheName !== CACHE_NAME && cacheName !== SHARE_CACHE_NAME) {
-            console.warn('SW: Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
     }).then(() => {
       // Take control of all clients immediately
-      return self.clients.claim().then(() => {
-        // Send confirmation
-        return self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(clients => {
-          if (clients.length > 0) {
-            clients[0].postMessage({
-              type: 'DEBUG_MESSAGE',
-              prefix: 'SW',
-              message: '✅ Service Worker activated and claimed clients',
-              data: { clientsCount: clients.length }
-            });
-          }
-        });
-      });
+      return self.clients.claim();
     })
   );
 });

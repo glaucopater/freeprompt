@@ -22,46 +22,61 @@ export const handler: Handler = async (event) => {
     };
   }
 
-  const genAI = new GoogleGenerativeAI(GOOGLE_API_KEY);
-  const selectedModel = event.body ? JSON.parse(event.body).model : DEFAULT_MODEL;
-  const model = genAI.getGenerativeModel({ model: selectedModel });
-
   if (event.body) {
-    const startTime = Date.now();
-    const { data, mimeType } = JSON.parse(event.body);
-    const imageResp = Buffer.from(data, "base64");
-    
-    // Use provided mimeType or default to jpeg
-    // Gemini supports: image/png, image/jpeg, image/webp, image/heic, image/heif
-    const actualMimeType = mimeType || "image/jpeg";
-    
-    const result = await model.generateContent([
-      {
-        inlineData: {
-          data: imageResp.toString("base64"),
-          mimeType: actualMimeType,
+    try {
+      const genAI = new GoogleGenerativeAI(GOOGLE_API_KEY);
+      const parsedBody = JSON.parse(event.body);
+      const selectedModel = parsedBody.model || DEFAULT_MODEL;
+      const model = genAI.getGenerativeModel({ model: selectedModel });
+      
+      const startTime = Date.now();
+      const { data, mimeType } = parsedBody;
+      const imageResp = Buffer.from(data, "base64");
+      
+      // Use provided mimeType or default to jpeg
+      // Gemini supports: image/png, image/jpeg, image/webp, image/heic, image/heif
+      const actualMimeType = mimeType || "image/jpeg";
+      
+      const result = await model.generateContent([
+        {
+          inlineData: {
+            data: imageResp.toString("base64"),
+            mimeType: actualMimeType,
+          },
         },
-      },
-      VISION_PROMPTS[0],
-    ]);
+        VISION_PROMPTS[0],
+      ]);
 
-    const endTime = Date.now();
-    const processingTime = endTime - startTime;
+      const endTime = Date.now();
+      const processingTime = endTime - startTime;
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        message: result.response.text(),
-        metadata: {
-          processingTime,
-          timestamp: new Date().toISOString(),
-          model: selectedModel
-        }
-      }),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    };
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          message: result.response.text(),
+          metadata: {
+            processingTime,
+            timestamp: new Date().toISOString(),
+            model: selectedModel
+          }
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      };
+    } catch (error) {
+      console.error("Error analyzing image:", error);
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          error: "Failed to analyze image",
+          details: error instanceof Error ? error.message : String(error),
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      };
+    }
   }
 
   return {

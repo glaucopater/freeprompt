@@ -673,6 +673,12 @@ export const setupEvents = () => {
         });
 
         const data = await response.json();
+        
+        // Check for error response
+        if (!response.ok || data.error) {
+          throw new Error(data.error || data.details || "Analysis failed");
+        }
+        
         const metadata = { ...data.metadata, imageStats };
         const analysisVisionData = parseVisionResponseData(
           data.message,
@@ -715,14 +721,21 @@ export const setupEvents = () => {
         }
       }
     } catch (error) {
+      // Log detailed error for debugging
       console.error("Error analyzing file:", error);
+      if (error instanceof Error) {
+        console.error("Error details:", error.message, error.stack);
+      }
+      
       if (resultsContainer) {
         resultsContainer.innerHTML = "";
         const errorSection = document.createElement("div");
         errorSection.className = "card shadow-sm bg-white rounded-3 p-4";
         const errorBody = document.createElement("div");
         errorBody.className = "text-danger text-center py-4";
-        errorBody.textContent = "Error analyzing file. Please try again.";
+        // Show more details if available
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        errorBody.textContent = `Error analyzing file: ${errorMessage}`;
         errorSection.append(errorBody);
         resultsContainer.append(errorSection);
         resultsContainer.classList.add("fade-in");

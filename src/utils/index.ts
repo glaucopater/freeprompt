@@ -1,7 +1,19 @@
 import { MAX_FILE_SIZE } from "../constants";
 import { AnalysisVisionData } from "../types";
 
-export const parseVisionResponseData = (data: string, metadata?: { processingTime: number, model: string, imageStats: { originalSize: number, resizedSize: number, originalWidth?: number, originalHeight?: number, originalAspectRatio?: number, resizedWidth?: number, resizedHeight?: number, resizedAspectRatio?: number } }) => {
+export const parseVisionResponseData = (data: string | undefined | null, metadata?: { processingTime: number, model: string, imageStats: { originalSize: number, resizedSize: number, originalWidth?: number, originalHeight?: number, originalAspectRatio?: number, resizedWidth?: number, resizedHeight?: number, resizedAspectRatio?: number } }) => {
+  // Handle null/undefined data
+  if (!data) {
+    return {
+      description: "Analysis failed - no response from API",
+      categories: [] as string[],
+      palette: [] as string[],
+      processingTime: metadata?.processingTime || 0,
+      model: metadata?.model || "Unknown",
+      imageStats: metadata?.imageStats
+    } as AnalysisVisionData;
+  }
+  
   // replace multiple times "\n\n" with "\n"  
   const filteredData = data.replace(/\n+/g, "\n");
   const [descriptionRaw, categoriesRaw, paletteRaw] = filteredData.split("\n");
