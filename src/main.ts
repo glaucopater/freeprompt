@@ -527,21 +527,124 @@ async function checkForSharedFiles() {
   }
 }
 
-// Check for shared files on page load
-// The service worker redirects to /?share=true after storing file in cache
-if (window.location.search.includes('share=true')) {
-  addDebugMessage('APP', 'Share redirect detected, checking cache...');
-  // Wait for service worker to be ready, then check cache
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.ready.then(() => {
-      checkForSharedFiles();
-    }).catch(() => {
-      // Try anyway even if service worker isn't ready
-      checkForSharedFiles();
+// Check for shared files from sessionStorage (Netlify function fallback)
+// The Netlify function stores file in sessionStorage when SW isn't installed
+function checkSessionStorageForSharedFiles() {
+  addDebugMessage('APP', 'Checking sessionStorage for shared files...');
+  
+  try {
+    const sharedContentStr = sessionStorage.getItem('sharedContent');
+    if (!sharedContentStr) {
+      addDebugMessage('APP', 'No shared content in sessionStorage');
+      return false;
+    }
+    
+    const sharedContent = JSON.parse(sharedContentStr);
+    addDebugMessage('APP', 'Found shared content in sessionStorage', {
+      filename: sharedContent.filename,
+      type: sharedContent.type,
+      mimetype: sharedContent.mimetype,
+      size: sharedContent.base64?.length || 0
     });
-  } else {
-    checkForSharedFiles();
+    
+    // Remove from sessionStorage immediately to prevent re-processing
+    sessionStorage.removeItem('sharedContent');
+    
+    if (sharedContent.base64 && sharedContent.filename && sharedContent.mimetype) {
+      // Convert base64 to File and add to input
+      const addFileToInput = () => {
+        const fileInput = document.getElementById("file-input") as HTMLInputElement;
+        if (fileInput) {
+          const blob = b64toBlob(sharedContent.base64, sharedContent.mimetype);
+          const file = new File([blob], sharedContent.filename, { type: sharedContent.mimetype });
+          
+          const dataTransfer = new DataTransfer();
+          dataTransfer.items.add(file);
+          fileInput.files = dataTransfer.files;
+          fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+          
+          addDebugMessage('APP', `✅ Shared file from sessionStorage added: ${sharedContent.filename}`);
+        } else {
+          // Retry if file input not found yet
+          setTimeout(addFileToInput, 100);
+        }
+      };
+      
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', addFileToInput);
+      } else {
+        addFileToInput();
+      }
+      
+      return true;
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    addDebugMessage('APP', `❌ Error reading sessionStorage: ${errorMessage}`);
   }
+  
+  return false;
+}
+
+// Check for shared files on page load
+// Service worker redirects to /?share=true, Netlify function redirects to /?shared=true
+const hasShareParam = window.location.search.includes('share=true') || window.location.search.includes('shared=true');
+
+if (hasShareParam) {
+  addDebugMessage('APP', 'Share redirect detected', { url: window.location.search });
+  
+  // First, check sessionStorage (from Netlify function fallback)
+  const foundInSessionStorage = checkSessionStorageForSharedFiles();
+  
+  if (!foundInSessionStorage) {
+    // If not in sessionStorage, check Cache Storage (from service worker)
+    addDebugMessage('APP', 'Not in sessionStorage, checking Cache Storage...');
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(() => {
+        checkForSharedFiles();
+      }).catch(() => {
+        // Try anyway even if service worker isn't ready
+        checkForSharedFiles();
+      });
+    } else {
+      checkForSharedFiles();
+    }
+  } else {
+    // Clean up URL
+    if (window.location.search) {
+      history.replaceState({}, document.title, window.location.pathname);
+    }
+  }
+}
+
+// Set up BroadcastChannel listener for share target notifications
+// This matches the channel used by the service worker
+const SHARE_CHANNEL_NAME = 'share-target-channel';
+if ('BroadcastChannel' in window) {
+  const shareChannel = new BroadcastChannel(SHARE_CHANNEL_NAME);
+  shareChannel.addEventListener('message', (event) => {
+    const data = event.data;
+    if (data && data.type) {
+      switch (data.type) {
+        case 'SHARE_STARTED':
+          addDebugMessage('SW', '📥 ' + (data.message || 'Processing shared content...'));
+          break;
+        case 'SHARE_COMPLETE':
+          addDebugMessage('SW', '✅ ' + (data.message || 'Share complete'), {
+            filename: data.filename,
+            size: data.size,
+            contentType: data.contentType
+          });
+          break;
+        case 'SHARE_ERROR':
+          addDebugMessage('SW', '❌ ' + (data.message || 'Share error'));
+          break;
+        default:
+          addDebugMessage('SW', 'Share channel message', data);
+      }
+    }
+  });
+  addDebugMessage('APP', 'BroadcastChannel listener set up for share notifications');
 }
 
 // Also set up message listener for debug messages from service worker

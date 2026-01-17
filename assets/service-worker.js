@@ -9,6 +9,11 @@ const SHARE_CACHE_NAME = 'freeprompt-share-target';
 // URL prefix for cached shared files - used to identify them later
 const SHARE_URL_PREFIX = '/shared-media/';
 
+// BroadcastChannel for sending notifications to the app (Google Chrome sample pattern)
+// This provides user feedback when files are being processed
+const SHARE_CHANNEL_NAME = 'share-target-channel';
+const broadcastChannel = 'BroadcastChannel' in self ? new BroadcastChannel(SHARE_CHANNEL_NAME) : null;
+
 // Don't cache index.html - it changes with each build and contains asset hashes
 // Caching it causes 404s when old HTML references new asset hashes
 const urlsToCache = [
@@ -72,6 +77,11 @@ self.addEventListener('fetch', (event) => {
 // Key insight: Store files in Cache API FIRST, then redirect. App reads from cache on load.
 async function handleShareTarget(event) {
   try {
+    // Notify app that we're processing a shared file
+    if (broadcastChannel) {
+      broadcastChannel.postMessage({ type: 'SHARE_STARTED', message: 'Saving shared media...' });
+    }
+    
     const formData = await event.request.formData();
     const mediaFile = formData.get('photos'); // Matches manifest.json param name
     
@@ -97,12 +107,34 @@ async function handleShareTarget(event) {
       );
       
       console.warn('SW: File stored in cache:', cacheKey);
+      
+      // Notify app that file was saved successfully
+      if (broadcastChannel) {
+        broadcastChannel.postMessage({ 
+          type: 'SHARE_COMPLETE', 
+          message: `Saved: ${mediaFile.name}`,
+          filename: mediaFile.name,
+          size: mediaFile.size,
+          contentType: mediaFile.type
+        });
+      }
+    } else {
+      // No valid file found
+      if (broadcastChannel) {
+        broadcastChannel.postMessage({ type: 'SHARE_ERROR', message: 'No valid file found in share data' });
+      }
     }
     
     // Redirect to app - the app will check for shared files in cache on load
     return Response.redirect('/?share=true', 303);
   } catch (error) {
     console.error('SW: Error handling share target:', error);
+    
+    // Notify app of error
+    if (broadcastChannel) {
+      broadcastChannel.postMessage({ type: 'SHARE_ERROR', message: `Error: ${error.message || error}` });
+    }
+    
     // Redirect to app even on error
     return Response.redirect('/', 303);
   }
@@ -196,13 +228,14 @@ self.addEventListener('activate', (event) => {
   }).catch(() => {});
   
   // Clean up old caches: delete all caches that don't match the current cache name
-  // This ensures new deployments automatically invalidate prior PWA caches
+  // IMPORTANT: Keep the share cache (SHARE_CACHE_NAME) for share target functionality!
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          // Delete all caches that don't match the current cache name
-          if (cacheName !== CACHE_NAME) {
+          // Delete old app caches, but KEEP the share cache!
+          if (cacheName !== CACHE_NAME && cacheName !== SHARE_CACHE_NAME) {
+            console.warn('SW: Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
