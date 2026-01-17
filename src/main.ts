@@ -2,6 +2,56 @@ import "./style.css";
 import { updateHealthcheckStatusInterval, setupEvents } from "./setup.ts";
 import { addDebugMessage } from "./utils/debug-panel.ts";
 
+// Debug: Check service worker registration status
+if ('serviceWorker' in navigator) {
+  // Listen for service worker registration events
+  window.addEventListener('sw-registered', (event: any) => {
+    const registration = event.detail;
+    addDebugMessage('APP', 'Service Worker registered', {
+      scope: registration.scope,
+      active: !!registration.active,
+      installing: !!registration.installing,
+      waiting: !!registration.waiting
+    });
+  });
+  
+  window.addEventListener('sw-activated', () => {
+    addDebugMessage('APP', '✅ Service Worker activated');
+  });
+  
+  window.addEventListener('sw-error', (event: any) => {
+    addDebugMessage('APP', '❌ Service Worker registration failed', { error: String(event.detail) });
+  });
+  
+  navigator.serviceWorker.ready.then(registration => {
+    addDebugMessage('APP', 'Service Worker ready', {
+      scope: registration.scope,
+      active: !!registration.active,
+      installing: !!registration.installing,
+      waiting: !!registration.waiting
+    });
+  }).catch(err => {
+    addDebugMessage('APP', 'Service Worker not ready', { error: String(err) });
+  });
+  
+  // Check if service worker is controlling the page
+  if (navigator.serviceWorker.controller) {
+    addDebugMessage('APP', 'Service Worker is controlling page', {
+      scriptURL: navigator.serviceWorker.controller.scriptURL,
+      state: navigator.serviceWorker.controller.state
+    });
+  } else {
+    addDebugMessage('APP', '⚠️ Service Worker is NOT controlling page');
+  }
+  
+  // Monitor service worker controller changes
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    addDebugMessage('APP', 'Service Worker controller changed', {
+      hasController: !!navigator.serviceWorker.controller
+    });
+  });
+}
+
 import appDetails from "../package.json";
 import logo from "./assets/images/logo-no-bg.png";
 import { Footer } from "./components/Footer.ts";

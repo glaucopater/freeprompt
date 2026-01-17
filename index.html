@@ -33,20 +33,27 @@
         navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
           .then(registration => {
             console.warn('Service Worker registered: ', registration);
+            // Send debug message to app
+            window.dispatchEvent(new CustomEvent('sw-registered', { detail: registration }));
             // Ensure service worker is active
             if (registration.installing) {
               registration.installing.addEventListener('statechange', () => {
                 if (registration.installing?.state === 'activated') {
                   console.warn('Service Worker activated');
+                  window.dispatchEvent(new CustomEvent('sw-activated'));
                 }
               });
             } else if (registration.waiting) {
               // If waiting, skip waiting to activate immediately
               registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+            } else if (registration.active) {
+              // Already active
+              window.dispatchEvent(new CustomEvent('sw-activated'));
             }
           })
           .catch(error => {
             console.error('Service Worker registration failed: ', error);
+            window.dispatchEvent(new CustomEvent('sw-error', { detail: error }));
           });
       }
     </script>

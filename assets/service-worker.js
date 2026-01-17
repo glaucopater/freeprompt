@@ -36,6 +36,26 @@ self.addEventListener('fetch', (event) => {
   const requestOrigin = url.origin;
   const requestPath = url.pathname;
   
+  // Debug: Log all POST requests to see if they're reaching the service worker
+  if (event.request.method === 'POST') {
+    // Send debug message to client if available
+    self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(clients => {
+      if (clients.length > 0) {
+        clients[0].postMessage({
+          type: 'DEBUG_MESSAGE',
+          prefix: 'SW',
+          message: `POST request detected: ${requestPath}`,
+          data: { 
+            method: event.request.method,
+            path: requestPath,
+            origin: requestOrigin,
+            url: event.request.url
+          }
+        });
+      }
+    }).catch(() => {});
+  }
+  
   // Skip Netlify function calls - they should never be cached
   if (requestPath.startsWith('/.netlify/functions/')) {
     return;
@@ -44,8 +64,33 @@ self.addEventListener('fetch', (event) => {
   // Handle Web Share Target API POST requests
   // This must be checked before other fetch handlers
   if (event.request.method === 'POST' && requestPath === '/share-target/') {
+    // Send debug message
+    self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(clients => {
+      if (clients.length > 0) {
+        clients[0].postMessage({
+          type: 'DEBUG_MESSAGE',
+          prefix: 'SW',
+          message: 'Share target POST intercepted!',
+          data: { path: requestPath }
+        });
+      }
+    }).catch(() => {});
     event.respondWith(handleShareTarget(event));
     return;
+  }
+  
+  // Debug: Log if POST request to share-target but path doesn't match
+  if (event.request.method === 'POST' && requestPath.includes('share-target')) {
+    self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(clients => {
+      if (clients.length > 0) {
+        clients[0].postMessage({
+          type: 'DEBUG_MESSAGE',
+          prefix: 'SW',
+          message: `POST to share-target but path mismatch: ${requestPath}`,
+          data: { expected: '/share-target/', actual: requestPath }
+        });
+      }
+    }).catch(() => {});
   }
   
   // Get the service worker's origin from registration scope
