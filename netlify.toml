@@ -4,6 +4,10 @@
   functions = "netlify/functions"
   targetPort = 5173
 
+[build.environment]
+  NODE_VERSION = "24"
+  # Ubuntu Noble 24.04 is the default build image
+
 [[headers]]
   for = "/service-worker.js"
   [headers.values]
