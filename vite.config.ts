@@ -20,27 +20,21 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       outDir: "dist",
-      // Disable content hashing - use fixed filenames
+      // Use content hashing for cache busting (Vite default behavior)
+      // This ensures browsers fetch new versions when code changes
       rollupOptions: {
         output: {
-          // Fixed filenames without hashes
-          entryFileNames: "assets/index.js",
-          chunkFileNames: "assets/[name].js",
+          // Include content hash in filenames for proper cache invalidation
+          entryFileNames: "assets/[name]-[hash].js",
+          chunkFileNames: "assets/[name]-[hash].js",
           assetFileNames: (assetInfo) => {
-            // Keep original filenames for assets
             const name = assetInfo.name || "";
+            // Keep manifest.json without hash (referenced by name in HTML)
             if (name.endsWith(".json")) {
-              return "assets/manifest.json";
+              return "assets/[name][extname]";
             }
-            if (name.includes("logo")) {
-              return "assets/logo-no-bg.png";
-            }
-            // For CSS and other assets, use fixed names
-            if (name.endsWith(".css")) {
-              return "assets/index.css";
-            }
-            // For other assets, preserve directory structure but remove hash
-            return `assets/${name}`;
+            // Add hash to all other assets for cache busting
+            return "assets/[name]-[hash][extname]";
           },
         },
       },

@@ -1,7 +1,7 @@
 // Cache versioning: Use build-time version or commit ref for automatic cache invalidation
 // Netlify provides COMMIT_REF, or we can use a timestamp-based version
 // This ensures new deployments automatically invalidate old caches
-const CACHE_VERSION = 'v1'; // This will be replaced at build time with actual version
+const CACHE_VERSION = 'v3-hash-fix'; // This will be replaced at build time with actual version
 const CACHE_NAME = `freeprompt-cache-${CACHE_VERSION}`;
 
 // Cache name for shared files (separate from app cache)
@@ -14,12 +14,12 @@ const SHARE_URL_PREFIX = '/shared-media/';
 const SHARE_CHANNEL_NAME = 'share-target-channel';
 const broadcastChannel = 'BroadcastChannel' in self ? new BroadcastChannel(SHARE_CHANNEL_NAME) : null;
 
-// Don't cache index.html - it changes with each build and contains asset hashes
-// Caching it causes 404s when old HTML references new asset hashes
+// Don't cache index.html or hashed assets - they change with each build
+// The browser will cache hashed assets automatically (immutable headers)
+// We only cache static assets that don't change
 const urlsToCache = [
   '/favicon.png',
-  '/images/logo-no-bg.png',
-  // Add other static assets you want to cache
+  // Don't cache hashed JS/CSS - they're cached by browser with immutable headers
 ];
 
 self.addEventListener('install', (event) => {
