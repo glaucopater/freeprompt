@@ -94,7 +94,7 @@ const sharedAudioFilename = urlParams.get("filename"); // Filename is generic
 const sharedAudioMimetype = urlParams.get("mimetype"); // Mimetype is generic
 
 if (sharedImageBase64 && sharedFilename && sharedMimetype) {
-  console.log("Shared image detected in URL parameters.");
+  console.warn("Shared image detected in URL parameters.");
   const imageBlob = b64toBlob(sharedImageBase64, sharedMimetype);
   const imageFile = new File([imageBlob], sharedFilename, { type: sharedMimetype });
 
@@ -106,14 +106,14 @@ if (sharedImageBase64 && sharedFilename && sharedMimetype) {
 
     // Dispatch a change event to trigger existing listeners
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-    console.log("Shared image programmatically added to file input.");
+    console.warn("Shared image programmatically added to file input.");
   } else {
     console.error("File input element not found.");
   }
   // Clean up the URL after processing
   history.replaceState({}, document.title, window.location.pathname);
 } else if (sharedAudioBase64 && sharedAudioFilename && sharedAudioMimetype) {
-  console.log("Shared audio detected in URL parameters.");
+  console.warn("Shared audio detected in URL parameters.");
   const audioBlob = b64toBlob(sharedAudioBase64, sharedAudioMimetype);
   const audioFile = new File([audioBlob], sharedAudioFilename, { type: sharedAudioMimetype });
 
@@ -125,7 +125,7 @@ if (sharedImageBase64 && sharedFilename && sharedMimetype) {
 
     // Dispatch a change event to trigger existing listeners
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-    console.log("Shared audio programmatically added to file input.");
+    console.warn("Shared audio programmatically added to file input.");
   } else {
     console.error("File input element not found.");
   }

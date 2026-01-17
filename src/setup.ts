@@ -30,6 +30,7 @@ let eventsAreSetup = false;
 
 export const setupEvents = () => {
   if (eventsAreSetup) return;
+  eventsAreSetup = true;
   // region Upload Area
   const uploadImageArea: HTMLElement | null =
     document.getElementById("upload-area");
@@ -196,13 +197,13 @@ export const setupEvents = () => {
 
       const data = await response.json();
       const analysisAudioData = data.message;
-      console.log("Raw Response:", data.message);
+      console.warn("Raw Response:", data.message);
 
       if (analysisAudioResults) {
         analysisAudioResults.style.display = "block";
         analysisAudioResults.innerHTML = "";
         const parsedData = parseAudioResponseData(analysisAudioData);
-        console.log("Parsed Data:", parsedData);
+        console.warn("Parsed Data:", parsedData);
         analysisAudioResults.append(Object.entries(parsedData).join("\n"));
       }
 
@@ -216,7 +217,7 @@ export const setupEvents = () => {
       );
 
       const listData = await responseList.json();
-      console.log("Raw Response List:", listData.files);
+      console.warn("Raw Response List:", listData.files);
     });
 
     // endregion audio
@@ -309,32 +310,32 @@ export const setupEvents = () => {
           return { message: text };
         });
         throw new Error(
-          (errorData as any).error ||
-            (errorData as any).message ||
+          (errorData as { error?: string; message?: string }).error ||
+            (errorData as { error?: string; message?: string }).message ||
             "Generation failed"
         );
       }
 
-      console.log("Response status:", response.status, response.statusText);
+      console.warn("Response status:", response.status, response.statusText);
 
       let dataUri: string | null = null;
       const contentType = response.headers.get("Content-Type");
-      console.log("Received Content-Type:", contentType);
+      console.warn("Received Content-Type:", contentType);
 
       if (contentType && contentType.startsWith("image/")) {
         const base64Image = await response.text();
-        console.log("Received base64 image (truncated):", base64Image.substring(0, 100) + "...");
+        console.warn("Received base64 image (truncated):", base64Image.substring(0, 100) + "...");
         dataUri = `data:${contentType};base64,${base64Image}`;
       } else if (contentType && contentType.startsWith("application/json")) {
         const jsonResponse = await response.json();
-        console.log("Received JSON response:", jsonResponse);
+        console.warn("Received JSON response:", jsonResponse);
         dataUri = jsonResponse.dataUri; // Assuming the JSON response has a dataUri field
       } else {
         // Handle unexpected content type or error
         throw new Error(`Unexpected content type: ${contentType}`);
       }
 
-      console.log("Final data URI (truncated):", dataUri ? dataUri.substring(0, 100) + "..." : "null");
+      console.warn("Final data URI (truncated):", dataUri ? dataUri.substring(0, 100) + "..." : "null");
 
       const title = "Generated Media";
       const contentViolation =

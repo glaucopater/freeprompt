@@ -54,7 +54,7 @@ export const handler: Handler = async (event) => {
       body: payloadString,
     });
 
-    console.log(
+    console.warn(
       "Reve AI Response Status:",
       reveResponse.status,
       reveResponse.statusText
@@ -65,8 +65,6 @@ export const handler: Handler = async (event) => {
       console.error("Error from Reve AI:", reveResponse.status, errorText);
       throw new Error(`Reve AI API error: ${reveResponse.status} ${errorText}`);
     }
-
-    let responseBody;
 
     // Always parse as JSON, assuming Reve AI API always returns JSON
     const response = await reveResponse.json();
@@ -87,7 +85,7 @@ export const handler: Handler = async (event) => {
       dataUri = `data:${mimeType};base64,${image}`;
     }
 
-    responseBody = {
+    const responseBody = {
       dataUri,
       title: "",
       description: [
@@ -118,9 +116,9 @@ export const handler: Handler = async (event) => {
       body: JSON.stringify(responseBody),
       headers,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Detect quota / rate limit errors and return 429 with retry info when possible
-    const message = err?.message || String(err);
+    const message = (err instanceof Error ? err.message : String(err));
 
     const errorBody = { error: message };
     logToFile({ request: requestPayload, error: err, response: errorBody });
