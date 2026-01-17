@@ -44,6 +44,7 @@ self.addEventListener('fetch', (event) => {
   // Handle Web Share Target API POST requests
   // This must be checked before other fetch handlers
   if (event.request.method === 'POST' && requestPath === '/share-target/') {
+    console.warn('[SW] Share target POST intercepted:', requestPath);
     event.respondWith(handleShareTarget(event));
     return;
   }
@@ -100,14 +101,26 @@ self.addEventListener('fetch', (event) => {
 // Handle Web Share Target API POST requests
 async function handleShareTarget(event) {
   try {
+    console.warn('[SW] Processing share target request...');
     const formData = await event.request.formData();
     const file = formData.get('photos'); // Matches manifest.json param name
     const text = formData.get('text');
     const title = formData.get('title');
     const urlParam = formData.get('url');
     
+    console.warn('[SW] Form data received:', {
+      hasFile: !!file,
+      fileType: file instanceof File ? file.type : 'not a file',
+      fileName: file instanceof File ? file.name : 'N/A',
+      fileSize: file instanceof File ? file.size : 0,
+      text: text || 'none',
+      title: title || 'none',
+      url: urlParam || 'none'
+    });
+    
     // Generate a unique ID for this share session
     const shareId = `share_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    console.warn('[SW] Generated shareId:', shareId);
     
     // Store file data in IndexedDB to avoid URL length limits
     // This is more robust for large files (images, audio)
@@ -141,6 +154,7 @@ async function handleShareTarget(event) {
       };
       
       // Store in IndexedDB
+      console.warn('[SW] Storing file data in IndexedDB...');
       await storeShareData(shareId, {
         file: fileData,
         text: text || null,
@@ -148,8 +162,10 @@ async function handleShareTarget(event) {
         url: urlParam || null,
         timestamp: Date.now()
       });
+      console.warn('[SW] File data stored successfully');
     } else {
       // Store text-only share
+      console.warn('[SW] No file found, storing text-only share...');
       await storeShareData(shareId, {
         file: null,
         text: text || null,
@@ -157,6 +173,7 @@ async function handleShareTarget(event) {
         url: urlParam || null,
         timestamp: Date.now()
       });
+      console.warn('[SW] Text-only share stored successfully');
     }
     
     // Build redirect URL with share ID (not file data)
@@ -165,8 +182,10 @@ async function handleShareTarget(event) {
     
     // Notify open clients about the shared content
     const clients = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
+    console.warn('[SW] Found', clients.length, 'open client(s)');
     if (clients.length > 0) {
       // If there's an open client, send message with share ID
+      console.warn('[SW] Sending postMessage to client with shareId:', shareId);
       clients[0].postMessage({
         type: 'SHARED_CONTENT',
         shareId: shareId,
@@ -179,10 +198,19 @@ async function handleShareTarget(event) {
         title: title,
         url: urlParam
       });
+      // Send debug message
+      clients[0].postMessage({
+        type: 'DEBUG_MESSAGE',
+        prefix: 'SW',
+        message: `Share processed: ${fileData ? fileData.filename : 'text-only'}`,
+        data: { shareId, hasFile: !!fileData }
+      });
       await clients[0].focus();
+      console.warn('[SW] postMessage sent and client focused');
     }
     
     // Redirect to app with share ID
+    console.warn('[SW] Redirecting to:', redirectUrl.toString());
     return Response.redirect(redirectUrl.toString(), 303);
   } catch (error) {
     console.error('Error handling share target:', error);
