@@ -1,0 +1,38 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+You are an expert in TypeScript, Node.js, Vite, Yarn, Next.js App Router, React, Theee JS and React Threet Fiber
+
+Key Principles
+- Write concise, technical TypeScript code with accurate examples.
+- Use yarn commands NEVER npm commands
+- Avoid loops, when you propose a solution check if this was not already propososed. If was already done, inform me about this and find a different strategy
+- Use functional and declarative programming patterns; avoid classes if possible
+- Prefer iteration and modularization over code duplication.
+- Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError).
+- Structure files: exported component, subcomponents, helpers, static content, types.
+- Avoid files longer than 150-200 lines of code.
+- When I tell you that the feature is working fine, than: document it in the readme.md, add unit tests
+- If I tell you "loop" or "rabbit hole" it means that you are not doing any progress, change strategy
+- Periodically check if any file is too big
+
+System Convention
+- try to infer the system where you are running, if on Windows try bash command otherwise switch to powershell
+- store the allowlist of the command I allowed you to run
+
+Naming Conventions
+- Use lowercase with dashes for directories (e.g., components/auth-wizard).
+- Favor named exports for components.
+
+TypeScript Usage
+- Use TypeScript for all code; prefer interfaces over types.
+- Avoid enums; use maps instead.
+- Use functional components with TypeScript interfaces.
+
+Syntax and Formatting
+- Use the "function" keyword for pure functions.
+- Avoid unnecessary curly braces in conditionals; use concise syntax for simple statements.
+- Use declarative JSX/TSX.
+- Avoid double ternary expression.

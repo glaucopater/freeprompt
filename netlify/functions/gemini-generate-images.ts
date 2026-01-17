@@ -107,7 +107,7 @@ export const handler: Handler = async (event) => {
     };
   } catch (err: unknown) {
     // Detect quota / rate limit errors and return 429 with retry info when possible
-    const message = err?.message || String(err);
+    const message = (err instanceof Error ? err.message : String(err));
     const isQuotaError = /Too Many Requests|exceeded your current quota|QuotaFailure/i.test(message);
     const isModelNotFound = /not found for API version|is not found for API version|not found/i.test(message);
 

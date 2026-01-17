@@ -21,7 +21,7 @@ const handler: Handler = async (event) => {
     busboy.on("file", (fieldname: string, file: Readable, filename: string | { filename?: string; mimeType?: string }, encoding: string, mimetype: string) => {
       // Extract mimetype from the filename object if it's an object
       const actualMimetype = typeof filename === 'object' && filename.mimeType ? filename.mimeType : mimetype;
-      const actualFilename = typeof filename === 'object' && filename.filename ? filename.filename : filename;
+      const actualFilename: string = typeof filename === 'object' && filename.filename ? filename.filename : (typeof filename === 'string' ? filename : 'unknown');
 
       let fileContent = "";
       file.on("data", (data) => {
