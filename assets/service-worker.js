@@ -49,20 +49,9 @@ self.addEventListener('fetch', (event) => {
   
   // CRITICAL: Handle Web Share Target API POST requests ONLY
   // EXACT match + POST only - this prevents interfering with normal app assets
+  // This must be checked FIRST before any other fetch handling
   if (event.request.method === 'POST' && requestPath === '/share-target/') {
-    // Send debug message immediately (non-blocking)
-    self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(clients => {
-      if (clients.length > 0) {
-        clients[0].postMessage({
-          type: 'DEBUG_MESSAGE',
-          prefix: 'SW',
-          message: '✅ Share target POST intercepted!',
-          data: { path: requestPath, url: event.request.url, resultingClientId: event.resultingClientId }
-        });
-      }
-    }).catch(() => {});
-    
-    // MUST call respondWith to intercept the request
+    // MUST call respondWith to intercept the request immediately
     event.respondWith(handleShareTarget(event));
     return; // Exit early - don't process further
   }
@@ -73,53 +62,51 @@ self.addEventListener('fetch', (event) => {
 });
 
 // Handle Web Share Target API POST requests
+// Based on Google Chrome web-share sample pattern
 async function handleShareTarget(event) {
   const url = new URL(event.request.url);
   
   try {
+    // Extract form data
     const formData = await event.request.formData();
     const file = formData.get('photos'); // Matches manifest.json param name
     const text = formData.get('text');
     const title = formData.get('title');
     const urlParam = formData.get('url');
     
-    // Use resultingClientId (newer, more reliable) - this is the client that will receive the response
+    // Wait for client to be available with retry logic
+    // When PWA opens from share, the client might not be ready immediately
     let targetClient = null;
-    if (event.resultingClientId) {
-      try {
-        targetClient = await self.clients.get(event.resultingClientId);
-        if (targetClient) {
-          targetClient.postMessage({
-            type: 'DEBUG_MESSAGE',
-            prefix: 'SW',
-            message: 'Found client via resultingClientId',
-            data: { resultingClientId: event.resultingClientId }
-          });
-        }
-      } catch {
-        // If we can't get the specific client, try to match all clients
-        const allClients = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
-        if (allClients.length > 0) {
-          targetClient = allClients[0];
-          targetClient.postMessage({
-            type: 'DEBUG_MESSAGE',
-            prefix: 'SW',
-            message: 'Fallback: using first available client',
-            data: { clientsCount: allClients.length }
-          });
+    const maxRetries = 10;
+    const retryDelay = 100; // 100ms between retries
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      // Try resultingClientId first (most reliable when available)
+      if (event.resultingClientId) {
+        try {
+          targetClient = await self.clients.get(event.resultingClientId);
+          if (targetClient) {
+            break; // Found client, exit retry loop
+          }
+        } catch {
+          // Client not available yet, continue to fallback
         }
       }
-    } else {
-      // Fallback: get any available client
-      const allClients = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
+      
+      // Fallback: try to match all clients
+      const allClients = await self.clients.matchAll({ 
+        includeUncontrolled: true, 
+        type: 'window' 
+      });
+      
       if (allClients.length > 0) {
         targetClient = allClients[0];
-        targetClient.postMessage({
-          type: 'DEBUG_MESSAGE',
-          prefix: 'SW',
-          message: 'No resultingClientId, using first available client',
-          data: { clientsCount: allClients.length }
-        });
+        break; // Found client, exit retry loop
+      }
+      
+      // If no client found, wait and retry
+      if (attempt < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
       }
     }
     
@@ -154,22 +141,59 @@ async function handleShareTarget(event) {
           url: urlParam || null
         });
         
-        targetClient.postMessage({
-          type: 'DEBUG_MESSAGE',
-          prefix: 'SW',
-          message: `✅ File forwarded to app: ${file.name} (${file.size} bytes)`,
-          data: { fileName: file.name, fileSize: file.size, fileType: file.type }
-        });
-      } catch (e) {
-        // If File object can't be transferred, log error
-        // e is used in the error message below
+        // Wait a bit to ensure message is sent before redirect
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
         if (targetClient) {
           targetClient.postMessage({
             type: 'DEBUG_MESSAGE',
             prefix: 'SW',
-            message: `❌ Error forwarding file: ${e.message || String(e)}`,
+            message: `✅ File forwarded to app: ${file.name} (${file.size} bytes)`,
+            data: { fileName: file.name, fileSize: file.size, fileType: file.type }
+          });
+        }
+      } catch (e) {
+        // If File object can't be transferred, try cache API as fallback
+        if (targetClient) {
+          targetClient.postMessage({
+            type: 'DEBUG_MESSAGE',
+            prefix: 'SW',
+            message: `❌ Error forwarding file via postMessage, trying cache fallback: ${e.message || String(e)}`,
             data: { error: e.message || String(e) }
           });
+        }
+        
+        // Fallback: Store in cache and notify client to retrieve
+        try {
+          const cache = await caches.open('share-target-cache');
+          const blob = await file.arrayBuffer();
+          await cache.put(`share-file-${Date.now()}`, new Response(blob, {
+            headers: { 'Content-Type': file.type }
+          }));
+          
+          if (targetClient) {
+            targetClient.postMessage({
+              type: 'SHARED_CONTENT',
+              file: null, // File not in message, use cache instead
+              fileCacheKey: `share-file-${Date.now()}`,
+              fileName: file.name,
+              fileType: file.type,
+              fileSize: file.size,
+              text: text || null,
+              title: title || null,
+              url: urlParam || null
+            });
+          }
+        } catch (cacheError) {
+          // Cache also failed, send error
+          if (targetClient) {
+            targetClient.postMessage({
+              type: 'DEBUG_MESSAGE',
+              prefix: 'SW',
+              message: `❌ Cache fallback also failed: ${cacheError.message || String(cacheError)}`,
+              data: { error: cacheError.message || String(cacheError) }
+            });
+          }
         }
       }
     } else if (targetClient && (text || title || urlParam)) {
@@ -202,7 +226,10 @@ async function handleShareTarget(event) {
     
     // Redirect to app (this opens the app window)
     // Use absolute URL to avoid redirect loops
-    const redirectUrl = new URL('/', event.request.url);
+    // Wait a bit more to ensure messages are processed
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    const redirectUrl = new URL('/', url.origin);
     if (targetClient) {
       targetClient.postMessage({
         type: 'DEBUG_MESSAGE',
