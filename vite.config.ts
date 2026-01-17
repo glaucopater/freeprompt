@@ -11,6 +11,11 @@ export default defineConfig(({ mode }) => {
 
   return {
     // vite config
+    server: {
+      host: "127.0.0.1", // Add this line for main HTTP server      
+      port: Number(env.VITE_PORT) || 5173,
+      open: "/", // Ensures clean open
+    },
     build: {
       outDir: "dist",
     },
