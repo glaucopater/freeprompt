@@ -115,7 +115,7 @@ export function initBrowserLogger(): void {
     }
   }, true); // Use capture phase to catch all errors
 
-  console.info('Browser logger initialized. Use getBrowserLogs() to retrieve logs.');
+  console.warn('Browser logger initialized. Use getBrowserLogs() to retrieve logs.');
 }
 
 export function getBrowserLogs(): LogEntry[] {
@@ -130,7 +130,7 @@ export function getBrowserLogs(): LogEntry[] {
 export function clearBrowserLogs(): void {
   try {
     localStorage.removeItem(LOG_STORAGE_KEY);
-    console.info('Browser logs cleared');
+    console.warn('Browser logs cleared');
   } catch {
     // Silently fail
   }

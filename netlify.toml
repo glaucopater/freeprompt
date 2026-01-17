@@ -54,10 +54,8 @@
   to = "/share-redirect.html"
   status = 200
 
-[[redirects]]
-  from = "/share-target/*"
-  to = "/.netlify/functions/share-target/:splat"
-  status = 200
+# Note: /share-target/* redirect removed - service worker handles POST requests
+# The SPA fallback will serve index.html, and the service worker intercepts POST
 
 # Exclude assets from SPA fallback - must come before catch-all
 # This handles all assets including manifest.json, CSS, JS files
@@ -80,6 +78,11 @@
   to = "/favicon.png"
   status = 200
   force = true
+
+# Note: /share-target/* is NOT excluded from SPA fallback
+# This allows POST requests to /share-target/ to fall through to SPA fallback
+# The service worker will intercept the POST before it reaches the server
+# This is the correct behavior for Web Share Target API
 
 # SPA fallback - must be last
 [[redirects]]

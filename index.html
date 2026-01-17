@@ -29,15 +29,25 @@
     <script type="module" src="/src/main.ts"></script>
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/service-worker.js')
-            .then(registration => {
-              console.log('Service Worker registered: ', registration);
-            })
-            .catch(error => {
-              console.error('Service Worker registration failed: ', error);
-            });
-        });
+        // Register service worker immediately (not on load) to ensure it's active for share target
+        navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
+          .then(registration => {
+            console.warn('Service Worker registered: ', registration);
+            // Ensure service worker is active
+            if (registration.installing) {
+              registration.installing.addEventListener('statechange', () => {
+                if (registration.installing?.state === 'activated') {
+                  console.warn('Service Worker activated');
+                }
+              });
+            } else if (registration.waiting) {
+              // If waiting, skip waiting to activate immediately
+              registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+            }
+          })
+          .catch(error => {
+            console.error('Service Worker registration failed: ', error);
+          });
       }
     </script>
     <%- injectScript %>
