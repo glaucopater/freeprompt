@@ -34,6 +34,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
+  // Handle Web Share Target API POST requests
+  // This must be checked before other fetch handlers
+  if (event.request.method === 'POST' && requestPath === '/share-target/') {
+    event.respondWith(handleShareTarget(event));
+    return;
+  }
+  
   // Get the service worker's origin from registration scope
   // Fallback: try self.location.origin, or extract from registration scope
   let serviceWorkerOrigin;
@@ -82,6 +89,174 @@ self.addEventListener('fetch', (event) => {
       })
   );
 });
+
+// Handle Web Share Target API POST requests
+async function handleShareTarget(event) {
+  try {
+    const formData = await event.request.formData();
+    const file = formData.get('photos'); // Matches manifest.json param name
+    const text = formData.get('text');
+    const title = formData.get('title');
+    const urlParam = formData.get('url');
+    
+    // Generate a unique ID for this share session
+    const shareId = `share_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    
+    // Store file data in IndexedDB to avoid URL length limits
+    // This is more robust for large files (images, audio)
+    let fileData = null;
+    if (file && file instanceof File) {
+      // Check file size - warn if very large (>10MB)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        console.warn(`Large file detected: ${file.size} bytes. Processing may be slow.`);
+      }
+      
+      // Convert file to base64 for storage
+      const arrayBuffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+      let binary = '';
+      // Process in chunks to avoid blocking
+      const chunkSize = 8192; // 8KB chunks
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.slice(i, i + chunkSize);
+        binary += String.fromCharCode.apply(null, chunk);
+      }
+      const base64 = btoa(binary);
+      
+      fileData = {
+        base64: base64,
+        filename: file.name,
+        mimetype: file.type,
+        size: file.size,
+        type: file.type.startsWith('image/') ? 'image' : 
+              file.type.startsWith('audio/') ? 'audio' : 'unknown'
+      };
+      
+      // Store in IndexedDB
+      await storeShareData(shareId, {
+        file: fileData,
+        text: text || null,
+        title: title || null,
+        url: urlParam || null,
+        timestamp: Date.now()
+      });
+    } else {
+      // Store text-only share
+      await storeShareData(shareId, {
+        file: null,
+        text: text || null,
+        title: title || null,
+        url: urlParam || null,
+        timestamp: Date.now()
+      });
+    }
+    
+    // Build redirect URL with share ID (not file data)
+    const redirectUrl = new URL('/', self.location.origin);
+    redirectUrl.searchParams.set('shareId', shareId);
+    
+    // Notify open clients about the shared content
+    const clients = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
+    if (clients.length > 0) {
+      // If there's an open client, send message with share ID
+      clients[0].postMessage({
+        type: 'SHARED_CONTENT',
+        shareId: shareId,
+        file: fileData ? {
+          name: fileData.filename,
+          type: fileData.mimetype,
+          size: fileData.size
+        } : null,
+        text: text,
+        title: title,
+        url: urlParam
+      });
+      await clients[0].focus();
+    }
+    
+    // Redirect to app with share ID
+    return Response.redirect(redirectUrl.toString(), 303);
+  } catch (error) {
+    console.error('Error handling share target:', error);
+    // Redirect to app even on error
+    return Response.redirect(new URL('/', self.location.origin).toString(), 303);
+  }
+}
+
+// Store share data in IndexedDB
+async function storeShareData(shareId, data) {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('ShareTargetDB', 1);
+    
+    request.onerror = () => {
+      console.error('IndexedDB open error:', request.error);
+      // Fallback to sessionStorage if IndexedDB fails
+      try {
+        sessionStorage.setItem(`share_${shareId}`, JSON.stringify(data));
+        resolve();
+      } catch (e) {
+        reject(e);
+      }
+    };
+    
+    request.onsuccess = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains('shares')) {
+        // Database not initialized, use sessionStorage fallback
+        try {
+          sessionStorage.setItem(`share_${shareId}`, JSON.stringify(data));
+          resolve();
+        } catch (e) {
+          reject(e);
+        }
+        return;
+      }
+      
+      const transaction = db.transaction(['shares'], 'readwrite');
+      const store = transaction.objectStore('shares');
+      const putRequest = store.put(data, shareId);
+      
+      putRequest.onsuccess = () => {
+        // Clean up old shares (older than 1 hour)
+        const cleanupTransaction = db.transaction(['shares'], 'readwrite');
+        const cleanupStore = cleanupTransaction.objectStore('shares');
+        const cleanupRequest = cleanupStore.openCursor();
+        
+        cleanupRequest.onsuccess = (e) => {
+          const cursor = e.target.result;
+          if (cursor) {
+            if (data.timestamp - cursor.value.timestamp > 3600000) { // 1 hour
+              cleanupStore.delete(cursor.primaryKey);
+            }
+            cursor.continue();
+          }
+        };
+        
+        resolve();
+      };
+      
+      putRequest.onerror = () => {
+        // Fallback to sessionStorage
+        try {
+          sessionStorage.setItem(`share_${shareId}`, JSON.stringify(data));
+          resolve();
+        } catch {
+          reject(putRequest.error);
+        }
+      };
+    };
+    
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('shares')) {
+        // Use shareId as the key directly (no keyPath needed)
+        const objectStore = db.createObjectStore('shares');
+        objectStore.createIndex('timestamp', 'timestamp', { unique: false });
+      }
+    };
+  });
+}
 
 self.addEventListener('activate', (event) => {
   // Clean up old caches: delete all caches that don't match the current cache name

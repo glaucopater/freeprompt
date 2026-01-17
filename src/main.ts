@@ -85,6 +85,156 @@ appDiv.innerHTML = `
 
 // Handle shared content after the DOM is rendered
 const urlParams = new URLSearchParams(window.location.search);
+const shareId = urlParams.get("shareId");
+
+// Interface for share data structure
+interface ShareFileData {
+  base64: string;
+  filename: string;
+  mimetype: string;
+  size: number;
+  type: 'image' | 'audio' | 'unknown';
+}
+
+interface ShareData {
+  file: ShareFileData | null;
+  text: string | null;
+  title: string | null;
+  url: string | null;
+  timestamp: number;
+}
+
+// Function to retrieve share data from IndexedDB or sessionStorage
+async function getShareData(shareId: string): Promise<ShareData | null> {
+  // Try IndexedDB first
+  return new Promise((resolve) => {
+    const request = indexedDB.open('ShareTargetDB', 1);
+    
+    request.onsuccess = () => {
+      const db = request.result;
+      if (db.objectStoreNames.contains('shares')) {
+        const transaction = db.transaction(['shares'], 'readonly');
+        const store = transaction.objectStore('shares');
+        const getRequest = store.get(shareId);
+        
+        getRequest.onsuccess = () => {
+          if (getRequest.result) {
+            // Delete after retrieval
+            const deleteTransaction = db.transaction(['shares'], 'readwrite');
+            const deleteStore = deleteTransaction.objectStore('shares');
+            deleteStore.delete(shareId);
+            resolve(getRequest.result);
+            return;
+          }
+          // Fallback to sessionStorage
+          try {
+            const sessionData = sessionStorage.getItem(`share_${shareId}`);
+            if (sessionData) {
+              sessionStorage.removeItem(`share_${shareId}`);
+              resolve(JSON.parse(sessionData));
+              return;
+            }
+          } catch (e) {
+            console.warn('Failed to read from sessionStorage:', e);
+          }
+          resolve(null);
+        };
+        
+        getRequest.onerror = () => {
+          // Fallback to sessionStorage
+          try {
+            const sessionData = sessionStorage.getItem(`share_${shareId}`);
+            if (sessionData) {
+              sessionStorage.removeItem(`share_${shareId}`);
+              resolve(JSON.parse(sessionData));
+              return;
+            }
+          } catch (e) {
+            console.warn('Failed to read from sessionStorage:', e);
+          }
+          resolve(null);
+        };
+      } else {
+        // Fallback to sessionStorage
+        try {
+          const sessionData = sessionStorage.getItem(`share_${shareId}`);
+          if (sessionData) {
+            sessionStorage.removeItem(`share_${shareId}`);
+            resolve(JSON.parse(sessionData));
+            return;
+          }
+        } catch (e) {
+          console.warn('Failed to read from sessionStorage:', e);
+        }
+        resolve(null);
+      }
+    };
+    
+    request.onerror = () => {
+      // Fallback to sessionStorage
+      try {
+        const sessionData = sessionStorage.getItem(`share_${shareId}`);
+        if (sessionData) {
+          sessionStorage.removeItem(`share_${shareId}`);
+          resolve(JSON.parse(sessionData));
+          return;
+        }
+      } catch (e) {
+        console.warn('Failed to read from sessionStorage:', e);
+      }
+      resolve(null);
+    };
+    
+    request.onupgradeneeded = () => {
+      // Database not initialized, try sessionStorage
+      try {
+        const sessionData = sessionStorage.getItem(`share_${shareId}`);
+        if (sessionData) {
+          sessionStorage.removeItem(`share_${shareId}`);
+          resolve(JSON.parse(sessionData));
+          return;
+        }
+      } catch (e) {
+        console.warn('Failed to read from sessionStorage:', e);
+      }
+      resolve(null);
+    };
+  });
+}
+
+// Function to process shared file
+function processSharedFile(fileData: ShareFileData) {
+  if (!fileData) return;
+  
+  const fileInput = document.getElementById("file-input") as HTMLInputElement;
+  if (!fileInput) {
+    console.error("File input element not found.");
+    return;
+  }
+  
+  const blob = b64toBlob(fileData.base64, fileData.mimetype);
+  const file = new File([blob], fileData.filename, { type: fileData.mimetype });
+  
+  const dataTransfer = new DataTransfer();
+  dataTransfer.items.add(file);
+  fileInput.files = dataTransfer.files;
+  
+  fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+  console.warn(`Shared ${fileData.type} programmatically added to file input.`);
+}
+
+// Handle shareId from service worker (new robust method)
+if (shareId) {
+  getShareData(shareId).then((shareData) => {
+    if (shareData && shareData.file) {
+      processSharedFile(shareData.file);
+    }
+    // Clean up URL
+    history.replaceState({}, document.title, window.location.pathname);
+  });
+}
+
+// Legacy support: Handle shared content from URL parameters (for backward compatibility)
 const sharedImageBase64 = urlParams.get("sharedImage");
 const sharedFilename = urlParams.get("filename");
 const sharedMimetype = urlParams.get("mimetype");
@@ -150,13 +300,31 @@ if (sharedImageBase64 && sharedFilename && sharedMimetype) {
 import { inspectPageLayout } from './utils/browser-logger.ts';
 window.addEventListener('load', () => {
   const layout = inspectPageLayout();
-  console.info('Page layout info:', layout);
+  // Layout inspection for debugging (silent in production)
+  if (import.meta.env.DEV) {
+    console.warn('Page layout info:', layout);
+  }
   
   // Check if html has 0 height (common issue)
   if (layout.html && typeof layout.html === 'object' && 'dimensions' in layout.html) {
     const htmlDims = layout.html.dimensions as { height?: string };
     if (htmlDims?.height === '0px') {
       console.warn('⚠️ HTML element has height 0px - this may cause layout issues');
+    }
+  }
+});
+
+// Listen for postMessage from service worker (for share target when app is already open)
+window.addEventListener('message', (event) => {
+  // Process messages from service worker (share target)
+  if (event.data && event.data.type === 'SHARED_CONTENT') {
+    const shareId = event.data.shareId;
+    if (shareId) {
+      getShareData(shareId).then((shareData) => {
+        if (shareData && shareData.file) {
+          processSharedFile(shareData.file);
+        }
+      });
     }
   }
 });
