@@ -2,15 +2,108 @@ import "./style.css";
 import { updateHealthcheckStatusInterval, setupEvents } from "./setup.ts";
 import { addDebugMessage } from "./utils/debug-panel.ts";
 
+// IMMEDIATE DEBUG: Log URL and sessionStorage state at the very start
+// This helps debug share target issues
+console.warn('[SHARE DEBUG] Page loaded with URL:', window.location.href);
+console.warn('[SHARE DEBUG] Search params:', window.location.search);
+console.warn('[SHARE DEBUG] SessionStorage sharedContent:', sessionStorage.getItem('sharedContent') ? 'EXISTS' : 'EMPTY');
+console.warn('[SHARE DEBUG] All sessionStorage keys:', Object.keys(sessionStorage));
+
+// Also check localStorage in case it ended up there
+console.warn('[SHARE DEBUG] All localStorage keys:', Object.keys(localStorage));
+
+// ============================================
+// VISIBLE DEBUG PANEL FOR MOBILE TESTING
+// Shows debug info directly on the page
+// ============================================
+function showMobileDebug(message: string, data?: Record<string, unknown>) {
+  let debugDiv = document.getElementById('mobile-debug-panel');
+  if (!debugDiv) {
+    debugDiv = document.createElement('div');
+    debugDiv.id = 'mobile-debug-panel';
+    debugDiv.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      max-height: 50vh;
+      overflow-y: auto;
+      background: rgba(0,0,0,0.9);
+      color: #0f0;
+      font-family: monospace;
+      font-size: 11px;
+      padding: 8px;
+      z-index: 999999;
+      white-space: pre-wrap;
+      word-break: break-all;
+    `;
+    // Add close button
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = 'X Close Debug';
+    closeBtn.style.cssText = 'position:sticky;top:0;background:red;color:white;border:none;padding:4px 8px;margin-bottom:8px;';
+    closeBtn.onclick = () => debugDiv?.remove();
+    debugDiv.appendChild(closeBtn);
+    debugDiv.appendChild(document.createElement('hr'));
+    document.body.appendChild(debugDiv);
+  }
+  const line = document.createElement('div');
+  line.style.borderBottom = '1px solid #333';
+  line.style.paddingBottom = '4px';
+  line.style.marginBottom = '4px';
+  const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+  line.textContent = `[${timestamp}] ${message}`;
+  if (data) {
+    line.textContent += '\n' + JSON.stringify(data, null, 2);
+  }
+  debugDiv.appendChild(line);
+}
+
+// Show initial page state
+showMobileDebug('PAGE LOADED', {
+  url: window.location.href,
+  search: window.location.search,
+  pathname: window.location.pathname,
+  hasShareParam: window.location.search.includes('share'),
+  sessionStorageKeys: Object.keys(sessionStorage),
+  hasSharedContent: !!sessionStorage.getItem('sharedContent')
+});
+
+// Check caches immediately
+if ('caches' in window) {
+  caches.keys().then(names => {
+    showMobileDebug('CACHE NAMES', { caches: names });
+    // Check share cache specifically
+    caches.open('freeprompt-share-target').then(cache => {
+      cache.keys().then(keys => {
+        showMobileDebug('SHARE CACHE CONTENTS', { 
+          count: keys.length,
+          urls: keys.map(k => k.url)
+        });
+      });
+    });
+  });
+}
+
+// Expose showMobileDebug globally for use elsewhere
+(window as unknown as { showMobileDebug: typeof showMobileDebug }).showMobileDebug = showMobileDebug;
+
 // Wait for DOM to be ready before initializing debug panel
 // The debug panel needs document.body to exist
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
-    addDebugMessage('APP', 'Main script loading...');
+    addDebugMessage('APP', 'Main script loading...', {
+      url: window.location.href,
+      search: window.location.search,
+      hasSessionStorage: !!sessionStorage.getItem('sharedContent')
+    });
   });
 } else {
   // DOM already loaded
-  addDebugMessage('APP', 'Main script loading...');
+  addDebugMessage('APP', 'Main script loading...', {
+    url: window.location.href,
+    search: window.location.search,
+    hasSessionStorage: !!sessionStorage.getItem('sharedContent')
+  });
 }
 
 // Debug: Check service worker registration status
@@ -453,12 +546,24 @@ const SHARE_URL_PREFIX = '/shared-media/';
 // Check for shared files in cache (Google Chrome sample pattern)
 // This is called when the app loads with ?share=true query parameter
 async function checkForSharedFiles() {
+  console.warn('[SHARE DEBUG] checkForSharedFiles called');
+  showMobileDebug('checkForSharedFiles called');
   addDebugMessage('APP', 'Checking for shared files in cache...');
   
   try {
+    // First, list all caches to see what exists
+    const allCacheNames = await caches.keys();
+    console.warn('[SHARE DEBUG] All cache names:', allCacheNames);
+    showMobileDebug('All caches', { names: allCacheNames });
+    
     const cache = await caches.open(SHARE_CACHE_NAME);
     const keys = await cache.keys();
     
+    console.warn('[SHARE DEBUG] Share cache keys:', keys.map(r => r.url));
+    showMobileDebug('Share cache contents', { 
+      count: keys.length,
+      urls: keys.map(r => r.url)
+    });
     addDebugMessage('APP', `Found ${keys.length} items in share cache`);
     
     // Find entries with our share URL prefix
@@ -530,12 +635,21 @@ async function checkForSharedFiles() {
 // Check for shared files from sessionStorage (Netlify function fallback)
 // The Netlify function stores file in sessionStorage when SW isn't installed
 function checkSessionStorageForSharedFiles() {
+  console.warn('[SHARE DEBUG] checkSessionStorageForSharedFiles called');
+  showMobileDebug('checkSessionStorageForSharedFiles called');
   addDebugMessage('APP', 'Checking sessionStorage for shared files...');
   
   try {
     const sharedContentStr = sessionStorage.getItem('sharedContent');
+    console.warn('[SHARE DEBUG] sessionStorage sharedContent:', sharedContentStr ? `Found (${sharedContentStr.length} chars)` : 'NOT FOUND');
+    showMobileDebug('sessionStorage.sharedContent', { 
+      exists: !!sharedContentStr,
+      length: sharedContentStr?.length || 0
+    });
+    
     if (!sharedContentStr) {
       addDebugMessage('APP', 'No shared content in sessionStorage');
+      showMobileDebug('❌ No sharedContent in sessionStorage');
       return false;
     }
     
@@ -590,31 +704,49 @@ function checkSessionStorageForSharedFiles() {
 // Service worker redirects to /?share=true, Netlify function redirects to /?shared=true
 const hasShareParam = window.location.search.includes('share=true') || window.location.search.includes('shared=true');
 
+console.warn('[SHARE DEBUG] hasShareParam:', hasShareParam, 'search:', window.location.search);
+showMobileDebug('SHARE PARAM CHECK', { 
+  hasShareParam, 
+  search: window.location.search,
+  includes_share: window.location.search.includes('share')
+});
+
 if (hasShareParam) {
+  showMobileDebug('✅ SHARE PARAM DETECTED - Starting file check...');
+  console.warn('[SHARE DEBUG] Share param detected! Checking for shared files...');
   addDebugMessage('APP', 'Share redirect detected', { url: window.location.search });
   
   // First, check sessionStorage (from Netlify function fallback)
+  showMobileDebug('Checking sessionStorage...');
   const foundInSessionStorage = checkSessionStorageForSharedFiles();
+  showMobileDebug('SessionStorage result', { found: foundInSessionStorage });
   
   if (!foundInSessionStorage) {
     // If not in sessionStorage, check Cache Storage (from service worker)
+    showMobileDebug('Not in sessionStorage, checking Cache Storage...');
     addDebugMessage('APP', 'Not in sessionStorage, checking Cache Storage...');
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.ready.then(() => {
+        showMobileDebug('SW ready, calling checkForSharedFiles...');
         checkForSharedFiles();
-      }).catch(() => {
+      }).catch((err) => {
+        showMobileDebug('SW not ready, trying anyway...', { error: String(err) });
         // Try anyway even if service worker isn't ready
         checkForSharedFiles();
       });
     } else {
+      showMobileDebug('No SW support, calling checkForSharedFiles...');
       checkForSharedFiles();
     }
   } else {
+    showMobileDebug('✅ Found in sessionStorage!');
     // Clean up URL
     if (window.location.search) {
       history.replaceState({}, document.title, window.location.pathname);
     }
   }
+} else {
+  showMobileDebug('❌ NO share param in URL');
 }
 
 // Set up BroadcastChannel listener for share target notifications

@@ -57,13 +57,30 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   const requestPath = url.pathname;
   
+  // DEBUG: Log all fetch requests to /share-target/
+  if (requestPath.includes('share-target')) {
+    console.warn('[SW FETCH] Share target request detected:', {
+      method: event.request.method,
+      path: requestPath,
+      url: event.request.url
+    });
+  }
+  
   // CRITICAL: Handle Web Share Target API POST requests ONLY
   // EXACT match + POST only - this prevents interfering with normal app assets
   // This must be checked FIRST before any other fetch handling
   if (event.request.method === 'POST' && requestPath === '/share-target/') {
+    console.warn('[SW FETCH] Intercepting POST to /share-target/');
     // MUST call respondWith to intercept the request immediately
     event.respondWith(handleShareTarget(event));
     return; // Exit early - don't process further
+  }
+  
+  // Also intercept without trailing slash just in case
+  if (event.request.method === 'POST' && requestPath === '/share-target') {
+    console.warn('[SW FETCH] Intercepting POST to /share-target (no trailing slash)');
+    event.respondWith(handleShareTarget(event));
+    return;
   }
   
   // Let ALL other fetches pass normally (don't intercept)
@@ -76,14 +93,35 @@ self.addEventListener('fetch', (event) => {
 // https://github.com/GoogleChrome/samples/blob/gh-pages/web-share/src/js/service-worker.js
 // Key insight: Store files in Cache API FIRST, then redirect. App reads from cache on load.
 async function handleShareTarget(event) {
+  console.warn('[SW handleShareTarget] Starting to process share target request');
+  
   try {
     // Notify app that we're processing a shared file
     if (broadcastChannel) {
       broadcastChannel.postMessage({ type: 'SHARE_STARTED', message: 'Saving shared media...' });
     }
     
+    console.warn('[SW handleShareTarget] Getting form data...');
     const formData = await event.request.formData();
+    
+    // Log all form data entries for debugging
+    const formEntries = [];
+    for (const [key, value] of formData.entries()) {
+      if (value instanceof File) {
+        formEntries.push({ key, type: 'File', name: value.name, size: value.size, mimeType: value.type });
+      } else {
+        formEntries.push({ key, type: 'string', value: String(value).substring(0, 100) });
+      }
+    }
+    console.warn('[SW handleShareTarget] Form data entries:', formEntries);
+    
     const mediaFile = formData.get('photos'); // Matches manifest.json param name
+    console.warn('[SW handleShareTarget] mediaFile from photos field:', mediaFile ? {
+      isFile: mediaFile instanceof File,
+      name: mediaFile instanceof File ? mediaFile.name : 'N/A',
+      size: mediaFile instanceof File ? mediaFile.size : 'N/A',
+      type: mediaFile instanceof File ? mediaFile.type : typeof mediaFile
+    } : 'null/undefined');
     
     if (mediaFile && mediaFile instanceof File && mediaFile.name) {
       // Store the shared file in cache (same pattern as Google Chrome sample)

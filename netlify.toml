@@ -57,8 +57,15 @@
 # Share Target: Route POST to Netlify function as fallback when service worker isn't installed
 # This is CRITICAL for first-time users who share before installing the PWA
 # The service worker will intercept if installed, otherwise this fallback handles it
+# Handle both with and without trailing slash
 [[redirects]]
   from = "/share-target/"
+  to = "/.netlify/functions/share-target"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/share-target"
   to = "/.netlify/functions/share-target"
   status = 200
   force = true
