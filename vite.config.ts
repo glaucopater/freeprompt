@@ -39,10 +39,10 @@ export default defineConfig(({ mode }) => {
          */
         inject: {
           data: {
-            title: "index",
+            title: "FreePrompt - AI Media Classifier",
             injectScript:
-              mode === "production"
-                ? `<script src="https://js-de.sentry-cdn.com/a81fdabbed6e0855d3b06a27d7af03de.min.js" crossorigin="anonymous"></script>`
+              mode === "production" && env.VITE_ENABLE_SENTRY !== "false"
+                ? `<script src="https://js-de.sentry-cdn.com/a81fdabbed6e0855d3b06a27d7af03de.min.js" crossorigin="anonymous" onerror="console.warn('Sentry script failed to load')"></script>`
                 : "",
           },
           tags: [
