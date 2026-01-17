@@ -107,18 +107,15 @@ interface ShareData {
 
 // Function to retrieve share data from IndexedDB or sessionStorage
 async function getShareData(shareId: string): Promise<ShareData | null> {
-  console.warn('[APP] getShareData called with shareId:', shareId);
   addDebugMessage('APP', `getShareData: ${shareId}`);
   // Try IndexedDB first
   return new Promise((resolve) => {
     const request = indexedDB.open('ShareTargetDB', 1);
     
     request.onsuccess = () => {
-      console.warn('[APP] IndexedDB opened successfully');
       addDebugMessage('APP', 'IndexedDB opened');
       const db = request.result;
       if (db.objectStoreNames.contains('shares')) {
-        console.warn('[APP] Object store "shares" exists, retrieving data...');
         const transaction = db.transaction(['shares'], 'readonly');
         const store = transaction.objectStore('shares');
         const getRequest = store.get(shareId);
@@ -129,7 +126,6 @@ async function getShareData(shareId: string): Promise<ShareData | null> {
               hasFile: !!getRequest.result.file,
               fileName: getRequest.result.file?.filename || 'N/A'
             };
-            console.warn('[APP] Data found in IndexedDB:', resultInfo);
             addDebugMessage('APP', '✅ Data found in IndexedDB', resultInfo);
             // Delete after retrieval
             const deleteTransaction = db.transaction(['shares'], 'readwrite');
@@ -138,99 +134,93 @@ async function getShareData(shareId: string): Promise<ShareData | null> {
             resolve(getRequest.result);
             return;
           }
-          console.warn('[APP] No data found in IndexedDB for shareId:', shareId);
           addDebugMessage('APP', '❌ No data in IndexedDB');
           // Fallback to sessionStorage
-          console.warn('[APP] Trying sessionStorage fallback...');
           try {
             const sessionData = sessionStorage.getItem(`share_${shareId}`);
             if (sessionData) {
-              console.warn('[APP] Data found in sessionStorage');
+              addDebugMessage('APP', 'Data found in sessionStorage');
               sessionStorage.removeItem(`share_${shareId}`);
               resolve(JSON.parse(sessionData));
               return;
             }
-            console.warn('[APP] No data in sessionStorage either');
+            addDebugMessage('APP', 'No data in sessionStorage either');
           } catch (e) {
-            console.warn('[APP] Failed to read from sessionStorage:', e);
+            addDebugMessage('APP', `Failed to read from sessionStorage: ${String(e)}`);
           }
-          console.warn('[APP] Resolving with null - no share data found');
+          addDebugMessage('APP', 'Resolving with null - no share data found');
           resolve(null);
         };
         
         getRequest.onerror = () => {
-          console.warn('[APP] IndexedDB get request failed, trying sessionStorage...');
           // Fallback to sessionStorage
           try {
             const sessionData = sessionStorage.getItem(`share_${shareId}`);
             if (sessionData) {
-              console.warn('[APP] Data found in sessionStorage (onerror)');
+              addDebugMessage('APP', 'Data found in sessionStorage (onerror)');
               sessionStorage.removeItem(`share_${shareId}`);
               resolve(JSON.parse(sessionData));
               return;
             }
-            console.warn('[APP] No data in sessionStorage (onerror)');
+            addDebugMessage('APP', 'No data in sessionStorage (onerror)');
           } catch (e) {
-            console.warn('[APP] Failed to read from sessionStorage (onerror):', e);
+            addDebugMessage('APP', `Failed to read from sessionStorage (onerror): ${String(e)}`);
           }
-          console.warn('[APP] Resolving with null (onerror)');
+          addDebugMessage('APP', 'Resolving with null (onerror)');
           resolve(null);
         };
       } else {
-        console.warn('[APP] Object store "shares" does not exist, trying sessionStorage...');
         // Fallback to sessionStorage
         try {
           const sessionData = sessionStorage.getItem(`share_${shareId}`);
           if (sessionData) {
-            console.warn('[APP] Data found in sessionStorage (no object store)');
+            addDebugMessage('APP', 'Data found in sessionStorage (no object store)');
             sessionStorage.removeItem(`share_${shareId}`);
             resolve(JSON.parse(sessionData));
             return;
           }
-          console.warn('[APP] No data in sessionStorage (no object store)');
+          addDebugMessage('APP', 'No data in sessionStorage (no object store)');
         } catch (e) {
-          console.warn('[APP] Failed to read from sessionStorage (no object store):', e);
+          addDebugMessage('APP', `Failed to read from sessionStorage (no object store): ${String(e)}`);
         }
-        console.warn('[APP] Resolving with null (no object store)');
+        addDebugMessage('APP', 'Resolving with null (no object store)');
         resolve(null);
       }
     };
     
     request.onerror = () => {
-      console.warn('[APP] IndexedDB open failed, trying sessionStorage...');
       // Fallback to sessionStorage
       try {
         const sessionData = sessionStorage.getItem(`share_${shareId}`);
         if (sessionData) {
-          console.warn('[APP] Data found in sessionStorage (open error)');
+          addDebugMessage('APP', 'Data found in sessionStorage (open error)');
           sessionStorage.removeItem(`share_${shareId}`);
           resolve(JSON.parse(sessionData));
           return;
         }
-        console.warn('[APP] No data in sessionStorage (open error)');
+        addDebugMessage('APP', 'No data in sessionStorage (open error)');
       } catch (e) {
-        console.warn('[APP] Failed to read from sessionStorage (open error):', e);
+        addDebugMessage('APP', `Failed to read from sessionStorage (open error): ${String(e)}`);
       }
-      console.warn('[APP] Resolving with null (open error)');
+      addDebugMessage('APP', 'Resolving with null (open error)');
       resolve(null);
     };
     
     request.onupgradeneeded = () => {
-      console.warn('[APP] IndexedDB upgrade needed, trying sessionStorage...');
       // Database not initialized, try sessionStorage
       try {
         const sessionData = sessionStorage.getItem(`share_${shareId}`);
         if (sessionData) {
-          console.warn('[APP] Data found in sessionStorage (upgrade needed)');
+          addDebugMessage('APP', 'Data found in sessionStorage (upgrade needed)');
           sessionStorage.removeItem(`share_${shareId}`);
           resolve(JSON.parse(sessionData));
           return;
         }
-        console.warn('[APP] No data in sessionStorage (upgrade needed)');
+        addDebugMessage('APP', 'No data in sessionStorage (upgrade needed)');
       } catch (e) {
-        console.warn('[APP] Failed to read from sessionStorage (upgrade needed):', e);
+        addDebugMessage('APP', `Failed to read from sessionStorage (upgrade needed): ${String(e)}`);
       }
-      console.warn('[APP] Resolving with null (upgrade needed)');
+      addDebugMessage('APP', 'Resolving with null (upgrade needed)');
       resolve(null);
     };
   });
@@ -239,7 +229,6 @@ async function getShareData(shareId: string): Promise<ShareData | null> {
 // Function to process shared file
 function processSharedFile(fileData: ShareFileData) {
   if (!fileData) {
-    console.warn('[APP] processSharedFile called with no data');
     addDebugMessage('APP', 'processSharedFile: no data');
     return;
   }
@@ -250,7 +239,6 @@ function processSharedFile(fileData: ShareFileData) {
     mimetype: fileData.mimetype,
     size: fileData.size
   };
-  console.warn('[APP] processSharedFile called:', fileInfo);
   addDebugMessage('APP', 'processSharedFile called', fileInfo);
   
   const fileInput = document.getElementById("file-input") as HTMLInputElement;
@@ -260,27 +248,22 @@ function processSharedFile(fileData: ShareFileData) {
     return;
   }
   
-  console.warn('[APP] Converting base64 to blob...');
   addDebugMessage('APP', 'Converting base64 to blob...');
   const blob = b64toBlob(fileData.base64, fileData.mimetype);
   const file = new File([blob], fileData.filename, { type: fileData.mimetype });
   
-  console.warn('[APP] Creating DataTransfer and adding file...');
   addDebugMessage('APP', 'Adding file to input...');
   const dataTransfer = new DataTransfer();
   dataTransfer.items.add(file);
   fileInput.files = dataTransfer.files;
   
-  console.warn('[APP] Dispatching change event on file input...');
   addDebugMessage('APP', 'Dispatching change event...');
   fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-  console.warn(`[APP] Shared ${fileData.type} programmatically added to file input.`);
   addDebugMessage('APP', `✅ File added successfully: ${fileData.filename}`);
 }
 
 // Handle shareId from service worker (new robust method)
 if (shareId) {
-  console.warn('[APP] ShareId detected in URL:', shareId);
   addDebugMessage('APP', `ShareId detected: ${shareId}`);
   getShareData(shareId).then((shareData) => {
     const shareInfo = {
@@ -289,14 +272,11 @@ if (shareId) {
       fileName: shareData?.file?.filename || 'N/A',
       fileType: shareData?.file?.type || 'N/A'
     };
-    console.warn('[APP] Retrieved share data:', shareInfo);
     addDebugMessage('APP', 'Retrieved share data', shareInfo);
     if (shareData && shareData.file) {
-      console.warn('[APP] Processing shared file:', shareData.file.filename);
       addDebugMessage('APP', `Processing file: ${shareData.file.filename}`);
       processSharedFile(shareData.file);
     } else {
-      console.warn('[APP] No file data found in share data');
       addDebugMessage('APP', 'No file data found in share data');
     }
     // Clean up URL
@@ -389,7 +369,6 @@ window.addEventListener('load', () => {
 
 // Listen for postMessage from service worker (for share target when app is already open)
 window.addEventListener('message', (event) => {
-  console.warn('[APP] Received message:', event.data);
   // Handle debug messages from service worker
   if (event.data && event.data.type === 'DEBUG_MESSAGE') {
     addDebugMessage(event.data.prefix || 'SW', event.data.message, event.data.data);
@@ -399,7 +378,6 @@ window.addEventListener('message', (event) => {
   // Process messages from service worker (share target)
   if (event.data && event.data.type === 'SHARED_CONTENT') {
     const shareId = event.data.shareId;
-    console.warn('[APP] SHARED_CONTENT message received with shareId:', shareId);
     addDebugMessage('APP', `SHARED_CONTENT received: ${shareId}`);
     if (shareId) {
       getShareData(shareId).then((shareData) => {
@@ -408,14 +386,11 @@ window.addEventListener('message', (event) => {
           hasFile: !!(shareData && shareData.file),
           fileName: shareData?.file?.filename || 'N/A'
         };
-        console.warn('[APP] Retrieved share data from postMessage:', shareInfo);
         addDebugMessage('APP', 'Retrieved from postMessage', shareInfo);
         if (shareData && shareData.file) {
-          console.warn('[APP] Processing shared file from postMessage:', shareData.file.filename);
           addDebugMessage('APP', `Processing file: ${shareData.file.filename}`);
           processSharedFile(shareData.file);
         } else {
-          console.warn('[APP] No file data found in share data from postMessage');
           addDebugMessage('APP', 'No file data from postMessage');
         }
       }).catch((error) => {
@@ -423,7 +398,6 @@ window.addEventListener('message', (event) => {
         addDebugMessage('APP', `Error: ${error.message || String(error)}`);
       });
     } else {
-      console.warn('[APP] No shareId in SHARED_CONTENT message');
       addDebugMessage('APP', 'No shareId in message');
     }
   }
