@@ -20,12 +20,28 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       outDir: "dist",
-      // Use deterministic hashing for easier testing (optional)
-      // In production, content-based hashing is better for cache busting
+      // Disable content hashing - use fixed filenames
       rollupOptions: {
         output: {
-          // You can customize asset file names here if needed
-          // But content-based hashing is recommended for production
+          // Fixed filenames without hashes
+          entryFileNames: "assets/index.js",
+          chunkFileNames: "assets/[name].js",
+          assetFileNames: (assetInfo) => {
+            // Keep original filenames for assets
+            const name = assetInfo.name || "";
+            if (name.endsWith(".json")) {
+              return "assets/manifest.json";
+            }
+            if (name.includes("logo")) {
+              return "assets/logo-no-bg.png";
+            }
+            // For CSS and other assets, use fixed names
+            if (name.endsWith(".css")) {
+              return "assets/index.css";
+            }
+            // For other assets, preserve directory structure but remove hash
+            return `assets/${name}`;
+          },
         },
       },
     },
@@ -66,7 +82,7 @@ export default defineConfig(({ mode }) => {
           ],
         },
       }),
-      // Plugin to inject cache version into service worker and add version query to HTML
+      // Plugin to inject cache version into service worker, add version query to HTML, and create _headers file
       {
         name: "inject-cache-version",
         writeBundle() {
@@ -91,20 +107,48 @@ export default defineConfig(({ mode }) => {
             console.warn("Failed to inject cache version into service worker:", error);
           }
 
-          // Add version query string to HTML to force cache refresh
-          // This ensures browsers always fetch fresh HTML even if cached
-          const indexPath = join(process.cwd(), "dist", "index.html");
+          // Note: We use fixed filenames (no content hashing)
+          // Cache busting is handled by:
+          // 1. Service worker network-first strategy for HTML
+          // 2. Proper cache headers to prevent HTML caching
+          // 3. Cache versioning in service worker
+
+          // Create _headers file in dist (Netlify uses this for headers)
+          // This is more reliable than netlify.toml headers for some cases
+          const headersPath = join(process.cwd(), "dist", "_headers");
+          const headersContent = `/index.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+/service-worker.js
+  Content-Type: application/javascript
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+/assets/*.js
+  Content-Type: application/javascript
+  X-Content-Type-Options: nosniff
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.css
+  Content-Type: text/css
+  X-Content-Type-Options: nosniff
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.json
+  Content-Type: application/json
+  X-Content-Type-Options: nosniff
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.png
+  Cache-Control: public, max-age=31536000, immutable
+`;
           try {
-            let htmlContent = readFileSync(indexPath, "utf-8");
-            // Add version query to script and link tags that reference assets
-            // This forces browsers to bypass cache for HTML even if service worker caches it
-            htmlContent = htmlContent.replace(
-              /(src|href)=(["'])(\/assets\/[^"']+)(\2)/g,
-              `$1=$2$3?v=${cacheVersion}$2`
-            );
-            writeFileSync(indexPath, htmlContent, "utf-8");
+            writeFileSync(headersPath, headersContent, "utf-8");
           } catch (error) {
-            console.warn("Failed to inject version query into HTML:", error);
+            console.warn("Failed to create _headers file:", error);
           }
         },
       },
