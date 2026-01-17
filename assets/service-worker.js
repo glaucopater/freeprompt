@@ -4,6 +4,11 @@
 const CACHE_VERSION = 'v1'; // This will be replaced at build time with actual version
 const CACHE_NAME = `freeprompt-cache-${CACHE_VERSION}`;
 
+// Cache name for shared files (separate from app cache)
+const SHARE_CACHE_NAME = 'freeprompt-share-target';
+// URL prefix for cached shared files - used to identify them later
+const SHARE_URL_PREFIX = '/shared-media/';
+
 // Don't cache index.html - it changes with each build and contains asset hashes
 // Caching it causes 404s when old HTML references new asset hashes
 const urlsToCache = [
@@ -62,203 +67,44 @@ self.addEventListener('fetch', (event) => {
 });
 
 // Handle Web Share Target API POST requests
-// Based on Google Chrome web-share sample pattern
+// Based on Google Chrome web-share sample pattern:
+// https://github.com/GoogleChrome/samples/blob/gh-pages/web-share/src/js/service-worker.js
+// Key insight: Store files in Cache API FIRST, then redirect. App reads from cache on load.
 async function handleShareTarget(event) {
-  const url = new URL(event.request.url);
-  
   try {
-    // Extract form data
     const formData = await event.request.formData();
-    const file = formData.get('photos'); // Matches manifest.json param name
-    const text = formData.get('text');
-    const title = formData.get('title');
-    const urlParam = formData.get('url');
+    const mediaFile = formData.get('photos'); // Matches manifest.json param name
     
-    // Wait for client to be available with retry logic
-    // When PWA opens from share, the client might not be ready immediately
-    let targetClient = null;
-    const maxRetries = 10;
-    const retryDelay = 100; // 100ms between retries
-    
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      // Try resultingClientId first (most reliable when available)
-      if (event.resultingClientId) {
-        try {
-          targetClient = await self.clients.get(event.resultingClientId);
-          if (targetClient) {
-            break; // Found client, exit retry loop
-          }
-        } catch {
-          // Client not available yet, continue to fallback
-        }
-      }
+    if (mediaFile && mediaFile instanceof File && mediaFile.name) {
+      // Store the shared file in cache (same pattern as Google Chrome sample)
+      const cache = await caches.open(SHARE_CACHE_NAME);
       
-      // Fallback: try to match all clients
-      const allClients = await self.clients.matchAll({ 
-        includeUncontrolled: true, 
-        type: 'window' 
-      });
+      // Create a unique cache key using URL prefix + timestamp + filename
+      const cacheKey = new URL(
+        `${SHARE_URL_PREFIX}${Date.now()}-${mediaFile.name}`,
+        self.location
+      ).href;
       
-      if (allClients.length > 0) {
-        targetClient = allClients[0];
-        break; // Found client, exit retry loop
-      }
+      // Store file as a Response object in cache
+      await cache.put(
+        cacheKey,
+        new Response(mediaFile, {
+          headers: {
+            'content-length': mediaFile.size,
+            'content-type': mediaFile.type,
+          },
+        })
+      );
       
-      // If no client found, wait and retry
-      if (attempt < maxRetries - 1) {
-        await new Promise(resolve => setTimeout(resolve, retryDelay));
-      }
+      console.warn('SW: File stored in cache:', cacheKey);
     }
     
-    // Send debug message about form data
-    if (targetClient) {
-      targetClient.postMessage({
-        type: 'DEBUG_MESSAGE',
-        prefix: 'SW',
-        message: 'Form data received',
-        data: {
-          hasFile: !!file,
-          fileType: file instanceof File ? file.type : 'not a file',
-          fileName: file instanceof File ? file.name : 'N/A',
-          fileSize: file instanceof File ? file.size : 0,
-          text: text || 'none',
-          title: title || 'none',
-          url: urlParam || 'none'
-        }
-      });
-    }
-    
-    // Forward file object directly to the app window via postMessage
-    // File objects CAN be transferred via postMessage (they're supported by structured clone)
-    if (targetClient && file && file instanceof File) {
-      try {
-        // Send the File object directly - it can be transferred via postMessage
-        targetClient.postMessage({
-          type: 'SHARED_CONTENT',
-          file: file, // File object passes fully via structured clone
-          text: text || null,
-          title: title || null,
-          url: urlParam || null
-        });
-        
-        // Wait a bit to ensure message is sent before redirect
-        await new Promise(resolve => setTimeout(resolve, 50));
-        
-        if (targetClient) {
-          targetClient.postMessage({
-            type: 'DEBUG_MESSAGE',
-            prefix: 'SW',
-            message: `✅ File forwarded to app: ${file.name} (${file.size} bytes)`,
-            data: { fileName: file.name, fileSize: file.size, fileType: file.type }
-          });
-        }
-      } catch (e) {
-        // If File object can't be transferred, try cache API as fallback
-        if (targetClient) {
-          targetClient.postMessage({
-            type: 'DEBUG_MESSAGE',
-            prefix: 'SW',
-            message: `❌ Error forwarding file via postMessage, trying cache fallback: ${e.message || String(e)}`,
-            data: { error: e.message || String(e) }
-          });
-        }
-        
-        // Fallback: Store in cache and notify client to retrieve
-        try {
-          const cache = await caches.open('share-target-cache');
-          const blob = await file.arrayBuffer();
-          await cache.put(`share-file-${Date.now()}`, new Response(blob, {
-            headers: { 'Content-Type': file.type }
-          }));
-          
-          if (targetClient) {
-            targetClient.postMessage({
-              type: 'SHARED_CONTENT',
-              file: null, // File not in message, use cache instead
-              fileCacheKey: `share-file-${Date.now()}`,
-              fileName: file.name,
-              fileType: file.type,
-              fileSize: file.size,
-              text: text || null,
-              title: title || null,
-              url: urlParam || null
-            });
-          }
-        } catch (cacheError) {
-          // Cache also failed, send error
-          if (targetClient) {
-            targetClient.postMessage({
-              type: 'DEBUG_MESSAGE',
-              prefix: 'SW',
-              message: `❌ Cache fallback also failed: ${cacheError.message || String(cacheError)}`,
-              data: { error: cacheError.message || String(cacheError) }
-            });
-          }
-        }
-      }
-    } else if (targetClient && (text || title || urlParam)) {
-      // Text-only share
-      targetClient.postMessage({
-        type: 'SHARED_CONTENT',
-        file: null,
-        text: text || null,
-        title: title || null,
-        url: urlParam || null
-      });
-      
-      targetClient.postMessage({
-        type: 'DEBUG_MESSAGE',
-        prefix: 'SW',
-        message: 'Text-only share forwarded to app',
-        data: { text: text || 'none', title: title || 'none' }
-      });
-    } else {
-      // No client available or no data
-      if (targetClient) {
-        targetClient.postMessage({
-          type: 'DEBUG_MESSAGE',
-          prefix: 'SW',
-          message: '⚠️ No file or text data to forward',
-          data: { hasFile: !!file, hasText: !!text, hasClient: !!targetClient }
-        });
-      }
-    }
-    
-    // Redirect to app (this opens the app window)
-    // Use absolute URL to avoid redirect loops
-    // Wait a bit more to ensure messages are processed
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    const redirectUrl = new URL('/', url.origin);
-    if (targetClient) {
-      targetClient.postMessage({
-        type: 'DEBUG_MESSAGE',
-        prefix: 'SW',
-        message: `Redirecting to: ${redirectUrl.toString()}`,
-        data: { redirectUrl: redirectUrl.toString() }
-      });
-    }
-    
-    return Response.redirect(redirectUrl.toString(), 303);
+    // Redirect to app - the app will check for shared files in cache on load
+    return Response.redirect('/?share=true', 303);
   } catch (error) {
-    console.error('Error handling share target:', error);
-    // Try to send error to client
-    try {
-      const clients = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
-      if (clients.length > 0) {
-        clients[0].postMessage({
-          type: 'DEBUG_MESSAGE',
-          prefix: 'SW',
-          message: `❌ Error handling share target: ${error.message || String(error)}`,
-          data: { error: error.message || String(error) }
-        });
-      }
-    } catch {
-      // Ignore
-    }
+    console.error('SW: Error handling share target:', error);
     // Redirect to app even on error
-    // Use absolute URL to avoid redirect loops
-    return Response.redirect(new URL('/', url.origin).toString(), 303);
+    return Response.redirect('/', 303);
   }
 }
 

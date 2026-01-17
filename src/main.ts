@@ -446,129 +446,112 @@ window.addEventListener('load', () => {
   }
 });
 
-// CRITICAL: Set up service worker message listener IMMEDIATELY and SYNCHRONOUSLY
-// This must be done before any other code runs, so messages aren't missed
-// Based on Google Chrome web-share sample - listener must be ready when SW sends messages
-function setupServiceWorkerMessageListener() {
-  if ('serviceWorker' in navigator) {
-    // Set up listener synchronously - don't wait for DOM or async operations
-    // The listener will be ready immediately when the script loads
-    navigator.serviceWorker.addEventListener('message', (event) => {
-      // Handle debug messages from service worker
-      if (event.data && event.data.type === 'DEBUG_MESSAGE') {
-        // Use setTimeout only for UI updates, but process message immediately
-        setTimeout(() => {
-          addDebugMessage(event.data.prefix || 'SW', event.data.message, event.data.data);
-        }, 0);
-        return;
+// Constants for share target (must match service-worker.js)
+const SHARE_CACHE_NAME = 'freeprompt-share-target';
+const SHARE_URL_PREFIX = '/shared-media/';
+
+// Check for shared files in cache (Google Chrome sample pattern)
+// This is called when the app loads with ?share=true query parameter
+async function checkForSharedFiles() {
+  addDebugMessage('APP', 'Checking for shared files in cache...');
+  
+  try {
+    const cache = await caches.open(SHARE_CACHE_NAME);
+    const keys = await cache.keys();
+    
+    addDebugMessage('APP', `Found ${keys.length} items in share cache`);
+    
+    // Find entries with our share URL prefix
+    const sharedFileKeys = keys.filter(request => 
+      request.url.includes(SHARE_URL_PREFIX)
+    );
+    
+    if (sharedFileKeys.length === 0) {
+      addDebugMessage('APP', 'No shared files found in cache');
+      return;
+    }
+    
+    addDebugMessage('APP', `Found ${sharedFileKeys.length} shared files`);
+    
+    // Process the most recent shared file (last one)
+    const mostRecentKey = sharedFileKeys[sharedFileKeys.length - 1];
+    const response = await cache.match(mostRecentKey);
+    
+    if (response) {
+      const blob = await response.blob();
+      const contentType = response.headers.get('content-type') || 'application/octet-stream';
+      
+      // Extract filename from cache key URL
+      const urlParts = mostRecentKey.url.split('/');
+      const filenameWithTimestamp = urlParts[urlParts.length - 1];
+      // Remove timestamp prefix (format: timestamp-filename)
+      const filename = filenameWithTimestamp.replace(/^\d+-/, '') || 'shared-file';
+      
+      const file = new File([blob], filename, { type: contentType });
+      
+      addDebugMessage('APP', `Retrieved shared file: ${filename} (${file.size} bytes, ${contentType})`);
+      
+      // Add file to input
+      const addFileToInput = () => {
+        const fileInput = document.getElementById("file-input") as HTMLInputElement;
+        if (fileInput) {
+          const dataTransfer = new DataTransfer();
+          dataTransfer.items.add(file);
+          fileInput.files = dataTransfer.files;
+          fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+          addDebugMessage('APP', `✅ Shared file added to input: ${filename}`);
+        } else {
+          // Retry if file input not found yet
+          setTimeout(addFileToInput, 100);
+        }
+      };
+      
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', addFileToInput);
+      } else {
+        addFileToInput();
       }
       
-      // Process SHARED_CONTENT messages with direct file object
-      if (event.data && event.data.type === 'SHARED_CONTENT') {
-        const file = event.data.file;
-        const text = event.data.text;
-        const title = event.data.title;
-        const urlParam = event.data.url;
-        const fileCacheKey = event.data.fileCacheKey;
-        const fileName = event.data.fileName;
-        const fileType = event.data.fileType;
-        const fileSize = event.data.fileSize;
-        
-        setTimeout(() => {
-          addDebugMessage('APP', 'SHARED_CONTENT received from service worker', {
-            hasFile: !!file,
-            fileName: file instanceof File ? file.name : (fileName || 'N/A'),
-            fileSize: file instanceof File ? file.size : (fileSize || 0),
-            fileType: file instanceof File ? file.type : (fileType || 'N/A'),
-            hasCacheKey: !!fileCacheKey,
-            hasText: !!text,
-            hasTitle: !!title,
-            hasUrl: !!urlParam
-          });
-        }, 0);
-        
-        // Process file - either direct File object or from cache
-        const processFile = async (fileToProcess: File | null) => {
-          if (!fileToProcess && fileCacheKey) {
-            // Retrieve file from cache
-            try {
-              const cache = await caches.open('share-target-cache');
-              const cachedResponse = await cache.match(fileCacheKey);
-              if (cachedResponse) {
-                const blob = await cachedResponse.blob();
-                fileToProcess = new File([blob], fileName || 'shared-file', { type: fileType || 'application/octet-stream' });
-                // Clean up cache entry
-                await cache.delete(fileCacheKey);
-              }
-            } catch (cacheError) {
-              setTimeout(() => {
-                const errorMessage = cacheError instanceof Error ? cacheError.message : String(cacheError);
-                addDebugMessage('APP', `❌ Error retrieving file from cache: ${errorMessage}`);
-              }, 0);
-            }
-          }
-          
-          if (fileToProcess && fileToProcess instanceof File) {
-            setTimeout(() => {
-              addDebugMessage('APP', `Processing file: ${fileToProcess.name}`);
-            }, 0);
-            
-            // Wait for DOM to be ready before accessing file input
-            const addFileToInput = () => {
-              const fileInput = document.getElementById("file-input") as HTMLInputElement;
-              if (fileInput) {
-                // Create a FileList with the shared file
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(fileToProcess);
-                fileInput.files = dataTransfer.files;
-                
-                // Dispatch change event to trigger existing upload handlers
-                fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-                addDebugMessage('APP', `✅ File added to input: ${fileToProcess.name} (${fileToProcess.size} bytes)`);
-              } else {
-                // Retry if file input not found yet
-                setTimeout(addFileToInput, 100);
-              }
-            };
-            
-            if (document.readyState === 'loading') {
-              document.addEventListener('DOMContentLoaded', addFileToInput);
-            } else {
-              addFileToInput();
-            }
-          } else if (text || title || urlParam) {
-            // Text-only share
-            setTimeout(() => {
-              addDebugMessage('APP', 'Text-only share received', { text, title, url: urlParam });
-            }, 0);
-          } else {
-            setTimeout(() => {
-              addDebugMessage('APP', '⚠️ SHARED_CONTENT received but no file or text data');
-            }, 0);
-          }
-        };
-        
-        // Process file immediately (don't wait for DOM)
-        processFile(file as File | null);
-        return;
-      }
-    });
+      // Clean up: delete processed file from cache
+      await cache.delete(mostRecentKey);
+      addDebugMessage('APP', 'Cleaned up shared file from cache');
+    }
     
-    // Also ensure service worker is ready
-    navigator.serviceWorker.ready.then(() => {
-      setTimeout(() => {
-        addDebugMessage('APP', 'Service worker ready, message listener active');
-      }, 0);
-    }).catch(() => {
-      setTimeout(() => {
-        addDebugMessage('APP', '⚠️ Service worker not ready');
-      }, 0);
-    });
+    // Clean up URL (remove ?share=true)
+    if (window.location.search.includes('share=true')) {
+      history.replaceState({}, document.title, window.location.pathname);
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    addDebugMessage('APP', `❌ Error checking shared files: ${errorMessage}`);
   }
 }
 
-// Set up service worker message listener IMMEDIATELY (synchronously)
-setupServiceWorkerMessageListener();
+// Check for shared files on page load
+// The service worker redirects to /?share=true after storing file in cache
+if (window.location.search.includes('share=true')) {
+  addDebugMessage('APP', 'Share redirect detected, checking cache...');
+  // Wait for service worker to be ready, then check cache
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(() => {
+      checkForSharedFiles();
+    }).catch(() => {
+      // Try anyway even if service worker isn't ready
+      checkForSharedFiles();
+    });
+  } else {
+    checkForSharedFiles();
+  }
+}
+
+// Also set up message listener for debug messages from service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'DEBUG_MESSAGE') {
+      addDebugMessage(event.data.prefix || 'SW', event.data.message, event.data.data);
+    }
+  });
+}
 
 // Also listen for window messages (for compatibility)
 window.addEventListener('message', (event) => {
