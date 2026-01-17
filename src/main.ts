@@ -1,5 +1,85 @@
 import "./style.css";
 import { updateHealthcheckStatusInterval, setupEvents } from "./setup.ts";
+import { addDebugMessage } from "./utils/debug-panel.ts";
+
+// Wait for DOM to be ready before initializing debug panel
+// The debug panel needs document.body to exist
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    addDebugMessage('APP', 'Main script loading...');
+  });
+} else {
+  // DOM already loaded
+  addDebugMessage('APP', 'Main script loading...');
+}
+
+// Debug: Check service worker registration status
+if ('serviceWorker' in navigator) {
+  // Listen for service worker registration events
+  window.addEventListener('sw-registered', (event: Event) => {
+    const customEvent = event as CustomEvent;
+    const registration = customEvent.detail;
+    addDebugMessage('APP', 'Service Worker registered', {
+      scope: registration.scope,
+      active: !!registration.active,
+      installing: !!registration.installing,
+      waiting: !!registration.waiting
+    });
+  });
+  
+  window.addEventListener('sw-activated', () => {
+    addDebugMessage('APP', '✅ Service Worker activated');
+  });
+  
+  window.addEventListener('sw-error', (event: Event) => {
+    const customEvent = event as CustomEvent;
+    addDebugMessage('APP', '❌ Service Worker registration failed', { error: String(customEvent.detail) });
+  });
+  
+  navigator.serviceWorker.ready.then(registration => {
+    addDebugMessage('APP', 'Service Worker ready', {
+      scope: registration.scope,
+      active: !!registration.active,
+      installing: !!registration.installing,
+      waiting: !!registration.waiting
+    });
+  }).catch(err => {
+    addDebugMessage('APP', 'Service Worker not ready', { error: String(err) });
+  });
+  
+  // Check if service worker is controlling the page
+  if (navigator.serviceWorker.controller) {
+    addDebugMessage('APP', 'Service Worker is controlling page', {
+      scriptURL: navigator.serviceWorker.controller.scriptURL,
+      state: navigator.serviceWorker.controller.state
+    });
+  } else {
+    addDebugMessage('APP', '⚠️ Service Worker is NOT controlling page');
+  }
+  
+  // Monitor service worker controller changes
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    addDebugMessage('APP', 'Service Worker controller changed', {
+      hasController: !!navigator.serviceWorker.controller
+    });
+  });
+  
+  // Ping service worker to confirm it's active
+  setTimeout(() => {
+    if (navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'PING' });
+      addDebugMessage('APP', 'Sent PING to service worker');
+    } else {
+      addDebugMessage('APP', '⚠️ Cannot ping service worker - no controller');
+    }
+  }, 1000);
+  
+  // Check URL for share target indicators
+  const currentUrl = window.location.href;
+  if (currentUrl.includes('share-target') || currentUrl.includes('shareId')) {
+    addDebugMessage('APP', 'Share target URL detected', { url: currentUrl });
+  }
+}
 
 import appDetails from "../package.json";
 import logo from "./assets/images/logo-no-bg.png";
@@ -106,11 +186,13 @@ interface ShareData {
 
 // Function to retrieve share data from IndexedDB or sessionStorage
 async function getShareData(shareId: string): Promise<ShareData | null> {
+  addDebugMessage('APP', `getShareData: ${shareId}`);
   // Try IndexedDB first
   return new Promise((resolve) => {
     const request = indexedDB.open('ShareTargetDB', 1);
     
     request.onsuccess = () => {
+      addDebugMessage('APP', 'IndexedDB opened');
       const db = request.result;
       if (db.objectStoreNames.contains('shares')) {
         const transaction = db.transaction(['shares'], 'readonly');
@@ -119,6 +201,11 @@ async function getShareData(shareId: string): Promise<ShareData | null> {
         
         getRequest.onsuccess = () => {
           if (getRequest.result) {
+            const resultInfo = {
+              hasFile: !!getRequest.result.file,
+              fileName: getRequest.result.file?.filename || 'N/A'
+            };
+            addDebugMessage('APP', '✅ Data found in IndexedDB', resultInfo);
             // Delete after retrieval
             const deleteTransaction = db.transaction(['shares'], 'readwrite');
             const deleteStore = deleteTransaction.objectStore('shares');
@@ -126,17 +213,21 @@ async function getShareData(shareId: string): Promise<ShareData | null> {
             resolve(getRequest.result);
             return;
           }
+          addDebugMessage('APP', '❌ No data in IndexedDB');
           // Fallback to sessionStorage
           try {
             const sessionData = sessionStorage.getItem(`share_${shareId}`);
             if (sessionData) {
+              addDebugMessage('APP', 'Data found in sessionStorage');
               sessionStorage.removeItem(`share_${shareId}`);
               resolve(JSON.parse(sessionData));
               return;
             }
+            addDebugMessage('APP', 'No data in sessionStorage either');
           } catch (e) {
-            console.warn('Failed to read from sessionStorage:', e);
+            addDebugMessage('APP', `Failed to read from sessionStorage: ${String(e)}`);
           }
+          addDebugMessage('APP', 'Resolving with null - no share data found');
           resolve(null);
         };
         
@@ -145,13 +236,16 @@ async function getShareData(shareId: string): Promise<ShareData | null> {
           try {
             const sessionData = sessionStorage.getItem(`share_${shareId}`);
             if (sessionData) {
+              addDebugMessage('APP', 'Data found in sessionStorage (onerror)');
               sessionStorage.removeItem(`share_${shareId}`);
               resolve(JSON.parse(sessionData));
               return;
             }
+            addDebugMessage('APP', 'No data in sessionStorage (onerror)');
           } catch (e) {
-            console.warn('Failed to read from sessionStorage:', e);
+            addDebugMessage('APP', `Failed to read from sessionStorage (onerror): ${String(e)}`);
           }
+          addDebugMessage('APP', 'Resolving with null (onerror)');
           resolve(null);
         };
       } else {
@@ -159,13 +253,16 @@ async function getShareData(shareId: string): Promise<ShareData | null> {
         try {
           const sessionData = sessionStorage.getItem(`share_${shareId}`);
           if (sessionData) {
+            addDebugMessage('APP', 'Data found in sessionStorage (no object store)');
             sessionStorage.removeItem(`share_${shareId}`);
             resolve(JSON.parse(sessionData));
             return;
           }
+          addDebugMessage('APP', 'No data in sessionStorage (no object store)');
         } catch (e) {
-          console.warn('Failed to read from sessionStorage:', e);
+          addDebugMessage('APP', `Failed to read from sessionStorage (no object store): ${String(e)}`);
         }
+        addDebugMessage('APP', 'Resolving with null (no object store)');
         resolve(null);
       }
     };
@@ -175,13 +272,16 @@ async function getShareData(shareId: string): Promise<ShareData | null> {
       try {
         const sessionData = sessionStorage.getItem(`share_${shareId}`);
         if (sessionData) {
+          addDebugMessage('APP', 'Data found in sessionStorage (open error)');
           sessionStorage.removeItem(`share_${shareId}`);
           resolve(JSON.parse(sessionData));
           return;
         }
+        addDebugMessage('APP', 'No data in sessionStorage (open error)');
       } catch (e) {
-        console.warn('Failed to read from sessionStorage:', e);
+        addDebugMessage('APP', `Failed to read from sessionStorage (open error): ${String(e)}`);
       }
+      addDebugMessage('APP', 'Resolving with null (open error)');
       resolve(null);
     };
     
@@ -190,13 +290,16 @@ async function getShareData(shareId: string): Promise<ShareData | null> {
       try {
         const sessionData = sessionStorage.getItem(`share_${shareId}`);
         if (sessionData) {
+          addDebugMessage('APP', 'Data found in sessionStorage (upgrade needed)');
           sessionStorage.removeItem(`share_${shareId}`);
           resolve(JSON.parse(sessionData));
           return;
         }
+        addDebugMessage('APP', 'No data in sessionStorage (upgrade needed)');
       } catch (e) {
-        console.warn('Failed to read from sessionStorage:', e);
+        addDebugMessage('APP', `Failed to read from sessionStorage (upgrade needed): ${String(e)}`);
       }
+      addDebugMessage('APP', 'Resolving with null (upgrade needed)');
       resolve(null);
     };
   });
@@ -204,33 +307,62 @@ async function getShareData(shareId: string): Promise<ShareData | null> {
 
 // Function to process shared file
 function processSharedFile(fileData: ShareFileData) {
-  if (!fileData) return;
-  
-  const fileInput = document.getElementById("file-input") as HTMLInputElement;
-  if (!fileInput) {
-    console.error("File input element not found.");
+  if (!fileData) {
+    addDebugMessage('APP', 'processSharedFile: no data');
     return;
   }
   
+  const fileInfo = {
+    filename: fileData.filename,
+    type: fileData.type,
+    mimetype: fileData.mimetype,
+    size: fileData.size
+  };
+  addDebugMessage('APP', 'processSharedFile called', fileInfo);
+  
+  const fileInput = document.getElementById("file-input") as HTMLInputElement;
+  if (!fileInput) {
+    console.error("[APP] File input element not found.");
+    addDebugMessage('APP', 'ERROR: File input not found');
+    return;
+  }
+  
+  addDebugMessage('APP', 'Converting base64 to blob...');
   const blob = b64toBlob(fileData.base64, fileData.mimetype);
   const file = new File([blob], fileData.filename, { type: fileData.mimetype });
   
+  addDebugMessage('APP', 'Adding file to input...');
   const dataTransfer = new DataTransfer();
   dataTransfer.items.add(file);
   fileInput.files = dataTransfer.files;
   
+  addDebugMessage('APP', 'Dispatching change event...');
   fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-  console.warn(`Shared ${fileData.type} programmatically added to file input.`);
+  addDebugMessage('APP', `✅ File added successfully: ${fileData.filename}`);
 }
 
 // Handle shareId from service worker (new robust method)
 if (shareId) {
+  addDebugMessage('APP', `ShareId detected: ${shareId}`);
   getShareData(shareId).then((shareData) => {
+    const shareInfo = {
+      hasData: !!shareData,
+      hasFile: !!(shareData && shareData.file),
+      fileName: shareData?.file?.filename || 'N/A',
+      fileType: shareData?.file?.type || 'N/A'
+    };
+    addDebugMessage('APP', 'Retrieved share data', shareInfo);
     if (shareData && shareData.file) {
+      addDebugMessage('APP', `Processing file: ${shareData.file.filename}`);
       processSharedFile(shareData.file);
+    } else {
+      addDebugMessage('APP', 'No file data found in share data');
     }
     // Clean up URL
     history.replaceState({}, document.title, window.location.pathname);
+  }).catch((error) => {
+    console.error('[APP] Error retrieving share data:', error);
+    addDebugMessage('APP', `Error: ${error.message || String(error)}`);
   });
 }
 
@@ -314,20 +446,116 @@ window.addEventListener('load', () => {
   }
 });
 
-// Listen for postMessage from service worker (for share target when app is already open)
-window.addEventListener('message', (event) => {
-  // Process messages from service worker (share target)
-  if (event.data && event.data.type === 'SHARED_CONTENT') {
-    const shareId = event.data.shareId;
-    if (shareId) {
-      getShareData(shareId).then((shareData) => {
-        if (shareData && shareData.file) {
-          processSharedFile(shareData.file);
+// CRITICAL: Set up service worker message listener IMMEDIATELY
+// This must be done before any other code runs, so messages aren't missed
+// But we need to ensure DOM is ready for debug messages
+function setupServiceWorkerMessageListener() {
+  if ('serviceWorker' in navigator) {
+    // Use setTimeout to ensure DOM is ready for debug messages
+    setTimeout(() => {
+      addDebugMessage('APP', 'Setting up service worker message listener...');
+    }, 0);
+    
+    // Listen for messages from service worker (for share target)
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      // Use setTimeout to ensure DOM is ready
+      setTimeout(() => {
+        addDebugMessage('APP', 'Service worker message received', { 
+          type: event.data?.type,
+          hasData: !!event.data 
+        });
+      }, 0);
+      
+      // Handle debug messages from service worker
+      if (event.data && event.data.type === 'DEBUG_MESSAGE') {
+        setTimeout(() => {
+          addDebugMessage(event.data.prefix || 'SW', event.data.message, event.data.data);
+        }, 0);
+        return;
+      }
+      
+      // Process SHARED_CONTENT messages with direct file object
+      if (event.data && event.data.type === 'SHARED_CONTENT') {
+        const file = event.data.file;
+        const text = event.data.text;
+        const title = event.data.title;
+        const urlParam = event.data.url;
+        
+        setTimeout(() => {
+          addDebugMessage('APP', 'SHARED_CONTENT received from service worker', {
+            hasFile: !!file,
+            fileName: file instanceof File ? file.name : 'N/A',
+            fileSize: file instanceof File ? file.size : 0,
+            fileType: file instanceof File ? file.type : 'N/A',
+            hasText: !!text,
+            hasTitle: !!title,
+            hasUrl: !!urlParam
+          });
+        }, 0);
+        
+        if (file && file instanceof File) {
+          // File object received directly - process it immediately
+          setTimeout(() => {
+            addDebugMessage('APP', `Processing file directly: ${file.name}`);
+          }, 0);
+          
+          // Wait for DOM to be ready before accessing file input
+          const processFile = () => {
+            const fileInput = document.getElementById("file-input") as HTMLInputElement;
+            if (fileInput) {
+              // Create a FileList with the shared file
+              const dataTransfer = new DataTransfer();
+              dataTransfer.items.add(file);
+              fileInput.files = dataTransfer.files;
+              
+              // Dispatch change event to trigger existing upload handlers
+              fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+              addDebugMessage('APP', `✅ File added to input: ${file.name} (${file.size} bytes)`);
+            } else {
+              addDebugMessage('APP', '❌ File input element not found');
+            }
+          };
+          
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', processFile);
+          } else {
+            processFile();
+          }
+        } else if (text || title || urlParam) {
+          // Text-only share - could be handled separately if needed
+          setTimeout(() => {
+            addDebugMessage('APP', 'Text-only share received', { text, title, url: urlParam });
+          }, 0);
+        } else {
+          setTimeout(() => {
+            addDebugMessage('APP', '⚠️ SHARED_CONTENT received but no file or text data');
+          }, 0);
         }
-      });
-    }
+        return;
+      }
+    });
+  }
+}
+
+// Set up service worker message listener
+setupServiceWorkerMessageListener();
+
+// Also listen for window messages (for compatibility)
+window.addEventListener('message', (event) => {
+  // Handle debug messages from service worker
+  if (event.data && event.data.type === 'DEBUG_MESSAGE') {
+    addDebugMessage(event.data.prefix || 'SW', event.data.message, event.data.data);
+    return;
+  }
+  
+  // Process SHARED_CONTENT messages (fallback for window messages)
+  if (event.data && event.data.type === 'SHARED_CONTENT') {
+    addDebugMessage('APP', 'SHARED_CONTENT received via window message', { 
+      hasFile: !!(event.data.file),
+      hasText: !!event.data.text 
+    });
+    // The navigator.serviceWorker message handler above will handle the actual processing
   }
 });
-
 setupEvents();
 updateHealthcheckStatusInterval();
