@@ -146,5 +146,20 @@ if (sharedImageBase64 && sharedFilename && sharedMimetype) {
 }
 
 
+// Log page layout info on load to help debug layout issues
+import { inspectPageLayout } from './utils/browser-logger.ts';
+window.addEventListener('load', () => {
+  const layout = inspectPageLayout();
+  console.info('Page layout info:', layout);
+  
+  // Check if html has 0 height (common issue)
+  if (layout.html && typeof layout.html === 'object' && 'dimensions' in layout.html) {
+    const htmlDims = layout.html.dimensions as { height?: string };
+    if (htmlDims?.height === '0px') {
+      console.warn('⚠️ HTML element has height 0px - this may cause layout issues');
+    }
+  }
+});
+
 setupEvents();
 updateHealthcheckStatusInterval();

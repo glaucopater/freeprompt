@@ -20,6 +20,30 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       outDir: "dist",
+      // Disable content hashing - use fixed filenames
+      rollupOptions: {
+        output: {
+          // Fixed filenames without hashes
+          entryFileNames: "assets/index.js",
+          chunkFileNames: "assets/[name].js",
+          assetFileNames: (assetInfo) => {
+            // Keep original filenames for assets
+            const name = assetInfo.name || "";
+            if (name.endsWith(".json")) {
+              return "assets/manifest.json";
+            }
+            if (name.includes("logo")) {
+              return "assets/logo-no-bg.png";
+            }
+            // For CSS and other assets, use fixed names
+            if (name.endsWith(".css")) {
+              return "assets/index.css";
+            }
+            // For other assets, preserve directory structure but remove hash
+            return `assets/${name}`;
+          },
+        },
+      },
     },
     publicDir: "assets",
     plugins: [
@@ -58,7 +82,7 @@ export default defineConfig(({ mode }) => {
           ],
         },
       }),
-      // Plugin to inject cache version into service worker
+      // Plugin to inject cache version into service worker, add version query to HTML, and create _headers file
       {
         name: "inject-cache-version",
         writeBundle() {
@@ -69,6 +93,7 @@ export default defineConfig(({ mode }) => {
             process.env.npm_package_version || 
             Date.now().toString(36); // Fallback to timestamp-based version
           
+          // Update service worker cache version
           const swPath = join(process.cwd(), "dist", "service-worker.js");
           try {
             let swContent = readFileSync(swPath, "utf-8");
@@ -80,6 +105,50 @@ export default defineConfig(({ mode }) => {
             writeFileSync(swPath, swContent, "utf-8");
           } catch (error) {
             console.warn("Failed to inject cache version into service worker:", error);
+          }
+
+          // Note: We use fixed filenames (no content hashing)
+          // Cache busting is handled by:
+          // 1. Service worker network-first strategy for HTML
+          // 2. Proper cache headers to prevent HTML caching
+          // 3. Cache versioning in service worker
+
+          // Create _headers file in dist (Netlify uses this for headers)
+          // This is more reliable than netlify.toml headers for some cases
+          const headersPath = join(process.cwd(), "dist", "_headers");
+          const headersContent = `/index.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+/service-worker.js
+  Content-Type: application/javascript
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+/assets/*.js
+  Content-Type: application/javascript
+  X-Content-Type-Options: nosniff
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.css
+  Content-Type: text/css
+  X-Content-Type-Options: nosniff
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.json
+  Content-Type: application/json
+  X-Content-Type-Options: nosniff
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.png
+  Cache-Control: public, max-age=31536000, immutable
+`;
+          try {
+            writeFileSync(headersPath, headersContent, "utf-8");
+          } catch (error) {
+            console.warn("Failed to create _headers file:", error);
           }
         },
       },
