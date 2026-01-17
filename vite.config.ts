@@ -20,6 +20,14 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       outDir: "dist",
+      // Use deterministic hashing for easier testing (optional)
+      // In production, content-based hashing is better for cache busting
+      rollupOptions: {
+        output: {
+          // You can customize asset file names here if needed
+          // But content-based hashing is recommended for production
+        },
+      },
     },
     publicDir: "assets",
     plugins: [
@@ -58,7 +66,7 @@ export default defineConfig(({ mode }) => {
           ],
         },
       }),
-      // Plugin to inject cache version into service worker
+      // Plugin to inject cache version into service worker and add version query to HTML
       {
         name: "inject-cache-version",
         writeBundle() {
@@ -69,6 +77,7 @@ export default defineConfig(({ mode }) => {
             process.env.npm_package_version || 
             Date.now().toString(36); // Fallback to timestamp-based version
           
+          // Update service worker cache version
           const swPath = join(process.cwd(), "dist", "service-worker.js");
           try {
             let swContent = readFileSync(swPath, "utf-8");
@@ -80,6 +89,22 @@ export default defineConfig(({ mode }) => {
             writeFileSync(swPath, swContent, "utf-8");
           } catch (error) {
             console.warn("Failed to inject cache version into service worker:", error);
+          }
+
+          // Add version query string to HTML to force cache refresh
+          // This ensures browsers always fetch fresh HTML even if cached
+          const indexPath = join(process.cwd(), "dist", "index.html");
+          try {
+            let htmlContent = readFileSync(indexPath, "utf-8");
+            // Add version query to script and link tags that reference assets
+            // This forces browsers to bypass cache for HTML even if service worker caches it
+            htmlContent = htmlContent.replace(
+              /(src|href)=(["'])(\/assets\/[^"']+)(\2)/g,
+              `$1=$2$3?v=${cacheVersion}$2`
+            );
+            writeFileSync(indexPath, htmlContent, "utf-8");
+          } catch (error) {
+            console.warn("Failed to inject version query into HTML:", error);
           }
         },
       },
