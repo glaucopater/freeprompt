@@ -26,10 +26,10 @@ const oldHashes = {
   manifest: 'manifest-Dq4qqR1l.json'
 };
 
-console.log('📝 Simulating old cached HTML with old asset hashes...');
-console.log(`   Old JS: ${oldHashes.js}`);
-console.log(`   Old CSS: ${oldHashes.css}`);
-console.log(`   Old Manifest: ${oldHashes.manifest}`);
+console.warn('📝 Simulating old cached HTML with old asset hashes...');
+console.warn(`   Old JS: ${oldHashes.js}`);
+console.warn(`   Old CSS: ${oldHashes.css}`);
+console.warn(`   Old Manifest: ${oldHashes.manifest}`);
 
 // Replace current hashes with old ones
 html = html.replace(/index-[a-zA-Z0-9]+\.js/g, oldHashes.js);
@@ -40,11 +40,11 @@ html = html.replace(/manifest-[a-zA-Z0-9]+\.json/g, oldHashes.manifest);
 const oldIndexPath = join(distDir, 'index-old.html');
 writeFileSync(oldIndexPath, html, 'utf-8');
 
-console.log('✅ Created index-old.html with old asset hashes');
-console.log('\n🧪 To test:');
-console.log('   1. Start server: yarn serve');
-console.log('   2. Open: http://localhost:8888/index-old.html');
-console.log('   3. Check console for 404 errors');
-console.log('   4. The service worker should fetch fresh HTML on next navigation');
-console.log('\n💡 The fix: Service worker uses network-first for HTML,');
-console.log('   so even if old HTML is cached, it will fetch fresh HTML on next load.');
+console.warn('✅ Created index-old.html with old asset hashes');
+console.warn('\n🧪 To test:');
+console.warn('   1. Start server: yarn serve');
+console.warn('   2. Open: http://localhost:8888/index-old.html');
+console.warn('   3. Check console for 404 errors');
+console.warn('   4. The service worker should fetch fresh HTML on next navigation');
+console.warn('\n💡 The fix: Service worker uses network-first for HTML,');
+console.warn('   so even if old HTML is cached, it will fetch fresh HTML on next load.');

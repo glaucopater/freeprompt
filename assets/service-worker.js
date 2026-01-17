@@ -24,6 +24,13 @@ self.addEventListener('install', (event) => {
   );
 });
 
+// Listen for skip waiting message from registration
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   const requestOrigin = url.origin;
