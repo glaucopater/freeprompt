@@ -3,7 +3,7 @@ import * as path from "path";
 
 export const getCircularReplacer = () => {
   const seen = new WeakSet();
-  return (key: any, value: any) => {
+  return (key: string, value: unknown) => {
     if (typeof value === "object" && value !== null) {
       if (seen.has(value)) return "[Circular]";
       seen.add(value);
@@ -24,7 +24,7 @@ export const logToFile = (logData: object) => {
     const logDir = path.join(process.cwd(), "netlify", "functions", "logs");
     fs.mkdirSync(logDir, { recursive: true });
     const logFile = path.join(logDir, "reve-generate-images.log");
-    console.log(`Logging to: ${logFile}`);
+    console.warn(`Logging to: ${logFile}`);
     const entry =
       JSON.stringify(
         {
@@ -34,7 +34,7 @@ export const logToFile = (logData: object) => {
         getCircularReplacer()
       ) + "\n";
     fs.appendFileSync(logFile, entry, { encoding: "utf8" });
-  } catch (fileErr: any) {
-    console.log("Failed to write debug log file:", String(fileErr));
+  } catch (fileErr: unknown) {
+    console.warn("Failed to write debug log file:", String(fileErr));
   }
 };

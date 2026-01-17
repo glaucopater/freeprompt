@@ -87,7 +87,7 @@ export const handler: Handler = async (event) => {
     if (match && match.groups) {
       const title = match.groups.title;
       const description = match.groups.description;
-      console.log({ title, description });
+      console.warn({ title, description });
     }
 
     const responseBody = {
@@ -105,7 +105,7 @@ export const handler: Handler = async (event) => {
       body: JSON.stringify(responseBody),
       headers,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Detect quota / rate limit errors and return 429 with retry info when possible
     const message = err?.message || String(err);
     const isQuotaError = /Too Many Requests|exceeded your current quota|QuotaFailure/i.test(message);
@@ -114,13 +114,13 @@ export const handler: Handler = async (event) => {
     // try to extract retry delay in seconds from message (e.g. 'retryDelay":"39s' or 'RetryInfo","retryDelay":"39s')
     let retrySeconds: number | undefined;
     try {
-      const m = message.match(/(\"retryDelay\"|retryDelay)\s*[:=]\s*\??\"?(\d+)s/);
+      const m = message.match(/("retryDelay"|retryDelay)\s*[:=]\s*\??"?(\d+)s/);
       if (m && m[2]) retrySeconds = parseInt(m[2], 10);
       else {
         const m2 = message.match(/(\d+)s/);
         if (m2) retrySeconds = parseInt(m2[1], 10);
       }
-    } catch (e) {
+    } catch {
       // ignore parse errors
     }
 
@@ -150,7 +150,7 @@ export const handler: Handler = async (event) => {
         });
         const modelsJson = await modelsResp.json();
         // Log the models list to the function console for inspection
-        console.log('Available models from API:', JSON.stringify(modelsJson, null, 2));
+        console.warn('Available models from API:', JSON.stringify(modelsJson, null, 2));
         const errorBody = {
           error: message,
           models: modelsJson,
@@ -162,8 +162,8 @@ export const handler: Handler = async (event) => {
           body: JSON.stringify(errorBody),
           headers,
         };
-      } catch (listErr: any) {
-        const errorBody = { error: message, listError: listErr?.message || String(listErr) };
+      } catch (listErr: unknown) {
+        const errorBody = { error: message, listError: (listErr instanceof Error ? listErr.message : String(listErr)) };
         logToFile({ request: requestPayload, error: err, response: errorBody });
         return {
           statusCode: 500,

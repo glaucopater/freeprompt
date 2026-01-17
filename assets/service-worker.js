@@ -11,7 +11,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Opened cache');
+        console.warn('Opened cache');
         return cache.addAll(urlsToCache);
       })
   );
@@ -38,7 +38,7 @@ self.addEventListener('fetch', (event) => {
     } else if (self.location) {
       serviceWorkerOrigin = self.location.origin;
     }
-  } catch (e) {
+  } catch {
     // If we can't determine origin, be conservative and only handle relative URLs
     serviceWorkerOrigin = null;
   }

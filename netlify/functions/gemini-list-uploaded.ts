@@ -24,7 +24,7 @@ export const handler: Handler = async () => {
 
   const listFilesResponse = await fileManager.listFiles();
 
-  console.log("listFilesResponse", listFilesResponse);
+  console.warn("listFilesResponse", listFilesResponse);
 
   const response = Object.entries(listFilesResponse.files).map(
     ([_key, file]) => `name: ${file.name} | display name: ${file.displayName}`

@@ -86,7 +86,7 @@ export const convertWebPToPNGBase64 = (webpBase64: string) => {
 };
 
 
-export const getTitleAndDescriptionWithTextResponse = (message: any) => {
+export const getTitleAndDescriptionWithTextResponse = (message: string) => {
   let title = "Generated Media";
   let description = " -";
 

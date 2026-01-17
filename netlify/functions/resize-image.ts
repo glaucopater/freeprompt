@@ -3,8 +3,8 @@ import sharp from 'sharp';
 
 export const resizeImage = async (imageBuffer: Buffer, targetWidth?: number): Promise<Buffer> => {
   try {
-    console.log(`Resizing image. Original size: ${imageBuffer.length} bytes`);
-    const resizeOptions: any = { withoutEnlargement: true };
+    console.warn(`Resizing image. Original size: ${imageBuffer.length} bytes`);
+    const resizeOptions: { withoutEnlargement: boolean; width?: number } = { withoutEnlargement: true };
     if (targetWidth && typeof targetWidth === 'number') {
       resizeOptions.width = targetWidth;
     } else {
@@ -16,7 +16,7 @@ export const resizeImage = async (imageBuffer: Buffer, targetWidth?: number): Pr
       .resize(resizeOptions)
       .jpeg() // Force output to JPEG
       .toBuffer();
-    console.log(`Resized image. New size: ${resizedImageBuffer.length} bytes`);
+    console.warn(`Resized image. New size: ${resizedImageBuffer.length} bytes`);
     return resizedImageBuffer;
   } catch (error) {
     console.error("Error resizing image:", error);
@@ -25,9 +25,9 @@ export const resizeImage = async (imageBuffer: Buffer, targetWidth?: number): Pr
 };
 
 export const handler: Handler = async (event) => {
-  console.log("Resize image handler started.");
+  console.warn("Resize image handler started.");
   if (!event.body) {
-    console.log("No event body found.");
+    console.warn("No event body found.");
     return {
       statusCode: 400,
       body: JSON.stringify({ error: 'No image data provided' }),
@@ -44,10 +44,10 @@ export const handler: Handler = async (event) => {
     const contentType = event.headers['content-type'] || '';
 
     if (contentType.includes('application/json')) {
-      console.log("Content-Type is application/json. Parsing JSON body.");
+      console.warn("Content-Type is application/json. Parsing JSON body.");
       let body = event.body;
       if (body.charCodeAt(0) === 0xFEFF) { // Handle BOM
-        console.log("BOM found, removing it.");
+        console.warn("BOM found, removing it.");
         body = body.slice(1);
       }
       const parsedBody = JSON.parse(body);
@@ -55,7 +55,7 @@ export const handler: Handler = async (event) => {
       imageBuffer = Buffer.from(data, 'base64');
       originalSize = imageBuffer.length;
     } else if (contentType.startsWith('image/')) {
-      console.log(`Content-Type is image type: ${contentType}. Treating body as binary.`);
+      console.warn(`Content-Type is image type: ${contentType}. Treating body as binary.`);
       if (event.isBase64Encoded) {
         imageBuffer = Buffer.from(event.body, 'base64');
       } else {
@@ -63,7 +63,7 @@ export const handler: Handler = async (event) => {
       }
       originalSize = imageBuffer.length;
     } else {
-      console.log(`Unsupported Content-Type: ${contentType}`);
+      console.warn(`Unsupported Content-Type: ${contentType}`);
       return {
         statusCode: 415, // Unsupported Media Type
         body: JSON.stringify({ error: `Unsupported Content-Type: ${contentType}` }),
@@ -79,11 +79,11 @@ export const handler: Handler = async (event) => {
     const originalHeight = originalMetadata.height;
     const originalAspectRatio = originalWidth && originalHeight ? originalWidth / originalHeight : undefined;
 
-  console.log("Calling resizeImage function.");
+  console.warn("Calling resizeImage function.");
   // Determine target width as 50% of original width when available
   const targetWidth = originalWidth ? Math.max(1, Math.floor(originalWidth * 0.5)) : undefined;
   const resizedImageBuffer = await resizeImage(imageBuffer, targetWidth);
-    console.log("Resize successful, returning response.");
+    console.warn("Resize successful, returning response.");
 
     // Get resized image metadata
     const resizedMetadata = await sharp(resizedImageBuffer).metadata();
