@@ -2,9 +2,16 @@ import "./style.css";
 import { updateHealthcheckStatusInterval, setupEvents } from "./setup.ts";
 import { addDebugMessage } from "./utils/debug-panel.ts";
 
-// Initialize debug panel IMMEDIATELY (before anything else)
-// The debug panel is auto-initialized on first addDebugMessage call
-addDebugMessage('APP', 'Main script loading...');
+// Wait for DOM to be ready before initializing debug panel
+// The debug panel needs document.body to exist
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    addDebugMessage('APP', 'Main script loading...');
+  });
+} else {
+  // DOM already loaded
+  addDebugMessage('APP', 'Main script loading...');
+}
 
 // Debug: Check service worker registration status
 if ('serviceWorker' in navigator) {
@@ -441,64 +448,97 @@ window.addEventListener('load', () => {
 
 // CRITICAL: Set up service worker message listener IMMEDIATELY
 // This must be done before any other code runs, so messages aren't missed
-if ('serviceWorker' in navigator) {
-  addDebugMessage('APP', 'Setting up service worker message listener...');
-  
-  // Listen for messages from service worker (for share target)
-  navigator.serviceWorker.addEventListener('message', (event) => {
-    addDebugMessage('APP', 'Service worker message received', { 
-      type: event.data?.type,
-      hasData: !!event.data 
-    });
-    // Handle debug messages from service worker
-    if (event.data && event.data.type === 'DEBUG_MESSAGE') {
-      addDebugMessage(event.data.prefix || 'SW', event.data.message, event.data.data);
-      return;
-    }
+// But we need to ensure DOM is ready for debug messages
+function setupServiceWorkerMessageListener() {
+  if ('serviceWorker' in navigator) {
+    // Use setTimeout to ensure DOM is ready for debug messages
+    setTimeout(() => {
+      addDebugMessage('APP', 'Setting up service worker message listener...');
+    }, 0);
     
-    // Process SHARED_CONTENT messages with direct file object
-    if (event.data && event.data.type === 'SHARED_CONTENT') {
-      const file = event.data.file;
-      const text = event.data.text;
-      const title = event.data.title;
-      const urlParam = event.data.url;
+    // Listen for messages from service worker (for share target)
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      // Use setTimeout to ensure DOM is ready
+      setTimeout(() => {
+        addDebugMessage('APP', 'Service worker message received', { 
+          type: event.data?.type,
+          hasData: !!event.data 
+        });
+      }, 0);
       
-      addDebugMessage('APP', 'SHARED_CONTENT received from service worker', {
-        hasFile: !!file,
-        fileName: file instanceof File ? file.name : 'N/A',
-        fileSize: file instanceof File ? file.size : 0,
-        fileType: file instanceof File ? file.type : 'N/A',
-        hasText: !!text,
-        hasTitle: !!title,
-        hasUrl: !!urlParam
-      });
-      
-      if (file && file instanceof File) {
-        // File object received directly - process it immediately
-        addDebugMessage('APP', `Processing file directly: ${file.name}`);
-        const fileInput = document.getElementById("file-input") as HTMLInputElement;
-        if (fileInput) {
-          // Create a FileList with the shared file
-          const dataTransfer = new DataTransfer();
-          dataTransfer.items.add(file);
-          fileInput.files = dataTransfer.files;
-          
-          // Dispatch change event to trigger existing upload handlers
-          fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-          addDebugMessage('APP', `✅ File added to input: ${file.name} (${file.size} bytes)`);
-        } else {
-          addDebugMessage('APP', '❌ File input element not found');
-        }
-      } else if (text || title || urlParam) {
-        // Text-only share - could be handled separately if needed
-        addDebugMessage('APP', 'Text-only share received', { text, title, url: urlParam });
-      } else {
-        addDebugMessage('APP', '⚠️ SHARED_CONTENT received but no file or text data');
+      // Handle debug messages from service worker
+      if (event.data && event.data.type === 'DEBUG_MESSAGE') {
+        setTimeout(() => {
+          addDebugMessage(event.data.prefix || 'SW', event.data.message, event.data.data);
+        }, 0);
+        return;
       }
-      return;
-    }
-  });
+      
+      // Process SHARED_CONTENT messages with direct file object
+      if (event.data && event.data.type === 'SHARED_CONTENT') {
+        const file = event.data.file;
+        const text = event.data.text;
+        const title = event.data.title;
+        const urlParam = event.data.url;
+        
+        setTimeout(() => {
+          addDebugMessage('APP', 'SHARED_CONTENT received from service worker', {
+            hasFile: !!file,
+            fileName: file instanceof File ? file.name : 'N/A',
+            fileSize: file instanceof File ? file.size : 0,
+            fileType: file instanceof File ? file.type : 'N/A',
+            hasText: !!text,
+            hasTitle: !!title,
+            hasUrl: !!urlParam
+          });
+        }, 0);
+        
+        if (file && file instanceof File) {
+          // File object received directly - process it immediately
+          setTimeout(() => {
+            addDebugMessage('APP', `Processing file directly: ${file.name}`);
+          }, 0);
+          
+          // Wait for DOM to be ready before accessing file input
+          const processFile = () => {
+            const fileInput = document.getElementById("file-input") as HTMLInputElement;
+            if (fileInput) {
+              // Create a FileList with the shared file
+              const dataTransfer = new DataTransfer();
+              dataTransfer.items.add(file);
+              fileInput.files = dataTransfer.files;
+              
+              // Dispatch change event to trigger existing upload handlers
+              fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+              addDebugMessage('APP', `✅ File added to input: ${file.name} (${file.size} bytes)`);
+            } else {
+              addDebugMessage('APP', '❌ File input element not found');
+            }
+          };
+          
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', processFile);
+          } else {
+            processFile();
+          }
+        } else if (text || title || urlParam) {
+          // Text-only share - could be handled separately if needed
+          setTimeout(() => {
+            addDebugMessage('APP', 'Text-only share received', { text, title, url: urlParam });
+          }, 0);
+        } else {
+          setTimeout(() => {
+            addDebugMessage('APP', '⚠️ SHARED_CONTENT received but no file or text data');
+          }, 0);
+        }
+        return;
+      }
+    });
+  }
 }
+
+// Set up service worker message listener
+setupServiceWorkerMessageListener();
 
 // Also listen for window messages (for compatibility)
 window.addEventListener('message', (event) => {

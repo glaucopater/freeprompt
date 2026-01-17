@@ -45,14 +45,12 @@ self.addEventListener('message', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  const requestOrigin = url.origin;
   const requestPath = url.pathname;
   
-  // CRITICAL: Handle Web Share Target API POST requests FIRST
-  // This must be checked before ANY other handlers, including Netlify function checks
-  // The path might be '/share-target/' or '/share-target' (with or without trailing slash)
-  if (event.request.method === 'POST' && (requestPath === '/share-target/' || requestPath === '/share-target')) {
-    // Send debug message immediately
+  // CRITICAL: Handle Web Share Target API POST requests ONLY
+  // EXACT match + POST only - this prevents interfering with normal app assets
+  if (event.request.method === 'POST' && requestPath === '/share-target/') {
+    // Send debug message immediately (non-blocking)
     self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(clients => {
       if (clients.length > 0) {
         clients[0].postMessage({
@@ -63,89 +61,21 @@ self.addEventListener('fetch', (event) => {
         });
       }
     }).catch(() => {});
+    
     // MUST call respondWith to intercept the request
     event.respondWith(handleShareTarget(event));
     return; // Exit early - don't process further
   }
   
-  // Debug: Log ALL POST requests to see what's happening
-  if (event.request.method === 'POST') {
-    self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(clients => {
-      if (clients.length > 0) {
-        clients[0].postMessage({
-          type: 'DEBUG_MESSAGE',
-          prefix: 'SW',
-          message: `POST request detected: ${requestPath}`,
-          data: { 
-            method: event.request.method,
-            path: requestPath,
-            origin: requestOrigin,
-            url: event.request.url,
-            mode: event.request.mode,
-            credentials: event.request.credentials,
-            intercepted: false
-          }
-        });
-      }
-    }).catch(() => {});
-  }
-  
-  // Skip Netlify function calls - they should never be cached
-  if (requestPath.startsWith('/.netlify/functions/')) {
-    return;
-  }
-  
-  // Get the service worker's origin from registration scope
-  // Fallback: try self.location.origin, or extract from registration scope
-  let serviceWorkerOrigin;
-  try {
-    // Try to get origin from registration scope
-    if (self.registration && self.registration.scope) {
-      const scopeUrl = new URL(self.registration.scope);
-      serviceWorkerOrigin = scopeUrl.origin;
-    } else if (self.location) {
-      serviceWorkerOrigin = self.location.origin;
-    }
-  } catch {
-    // If we can't determine origin, be conservative and only handle relative URLs
-    serviceWorkerOrigin = null;
-  }
-  
-  // Only intercept same-origin requests
-  // Skip external CDN requests, API calls, and other cross-origin resources
-  if (serviceWorkerOrigin && requestOrigin !== serviceWorkerOrigin) {
-    // Let the browser handle external requests normally
-    return;
-  }
-  
-  // Only intercept navigation requests (HTML pages)
-  // Let the browser handle all asset requests (JS, CSS, images, etc.) directly
+  // Let ALL other fetches pass normally (don't intercept)
   // This prevents the service worker from interfering with asset loading
-  const isNavigationRequest = event.request.mode === 'navigate' || 
-                              requestPath === '/' || 
-                              requestPath === '/index.html';
-  
-  if (!isNavigationRequest) {
-    // Don't intercept asset requests - let browser handle them directly
-    return;
-  }
-
-  // Network-first strategy for navigation requests (HTML pages)
-  // This ensures we always get the latest HTML with correct asset hashes
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        return response;
-      })
-      .catch((_error) => {
-        // Fallback to cache only if network fails completely
-        return caches.match(event.request);
-      })
-  );
+  // and avoids infinite redirect loops
 });
 
 // Handle Web Share Target API POST requests
 async function handleShareTarget(event) {
+  const url = new URL(event.request.url);
+  
   try {
     const formData = await event.request.formData();
     const file = formData.get('photos'); // Matches manifest.json param name
@@ -153,8 +83,7 @@ async function handleShareTarget(event) {
     const title = formData.get('title');
     const urlParam = formData.get('url');
     
-    // Get the client that will receive the response (the new window opened by share target)
-    // Use event.resultingClientId if available, otherwise fall back to matching all clients
+    // Use resultingClientId (newer, more reliable) - this is the client that will receive the response
     let targetClient = null;
     if (event.resultingClientId) {
       try {
@@ -272,7 +201,8 @@ async function handleShareTarget(event) {
     }
     
     // Redirect to app (this opens the app window)
-    const redirectUrl = new URL('/', self.location.origin);
+    // Use absolute URL to avoid redirect loops
+    const redirectUrl = new URL('/', event.request.url);
     if (targetClient) {
       targetClient.postMessage({
         type: 'DEBUG_MESSAGE',
@@ -300,7 +230,8 @@ async function handleShareTarget(event) {
       // Ignore
     }
     // Redirect to app even on error
-    return Response.redirect(new URL('/', self.location.origin).toString(), 303);
+    // Use absolute URL to avoid redirect loops
+    return Response.redirect(new URL('/', url.origin).toString(), 303);
   }
 }
 
