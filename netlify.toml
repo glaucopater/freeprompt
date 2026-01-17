@@ -41,16 +41,10 @@
   to = "/.netlify/functions/share-target/:splat"
   status = 200
 
-# Exclude assets and API routes from SPA fallback
+# Exclude assets from SPA fallback
 [[redirects]]
   from = "/assets/*"
   to = "/assets/:splat"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/.netlify/*"
-  to = "/.netlify/:splat"
   status = 200
   force = true
 

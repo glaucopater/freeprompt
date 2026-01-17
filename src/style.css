@@ -133,16 +133,31 @@ button:focus-visible {
   padding: 20px;
   cursor: pointer;
   overflow: hidden;
+  position: relative;
 }
 
 .upload-area p {
   font-size: 16px;
   margin-bottom: 10px;
+  position: relative;
+  z-index: 1;
 }
 
-.upload-area .file-info {
+.upload-preview-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+  z-index: 0;
+}
+
+.file-info {
   font-size: 14px;
   color: #666;
+  margin: 0 auto;
 }
 
 .upload-area-dragover {
@@ -239,6 +254,10 @@ footer p {
 
   .logo {
     padding: 0.25em;
+  }
+
+  .tab-content {
+    padding: 0.75rem !important;
   }
 }
 
