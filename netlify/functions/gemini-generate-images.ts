@@ -126,7 +126,9 @@ export const handler: Handler = async (event) => {
 
     if (isQuotaError) {
       const errorBody = {
-        error: message,
+        error: "Rate limit exceeded",
+        errorType: "RATE_LIMIT",
+        details: "Daily API quota exhausted. Please try again tomorrow.",
         retryAfterSeconds: retrySeconds,
         metadata: { model: allowedModel, mocked: true, quotaExceeded: true, timestamp: new Date().toISOString() },
       };
