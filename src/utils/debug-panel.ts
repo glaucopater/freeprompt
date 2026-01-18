@@ -1,10 +1,15 @@
 // Debug panel for smartphone debugging
 // Displays debug messages directly in the UI
+// Only active when VITE_ENABLE_DEBUG=true
+
+import { DEBUG_ENABLED } from './debug';
 
 const MAX_MESSAGES = 20;
 let messageCount = 0;
 
-function createDebugPanel(): HTMLDivElement {
+function createDebugPanel(): HTMLDivElement | null {
+  // Don't create panel if debug is disabled
+  if (!DEBUG_ENABLED) return null;
   const panel = document.createElement('div');
   panel.id = 'debug-panel';
   panel.style.cssText = `
@@ -55,7 +60,9 @@ function createDebugPanel(): HTMLDivElement {
 
 let debugPanel: HTMLDivElement | null = null;
 
-function getDebugPanel(): HTMLDivElement {
+function getDebugPanel(): HTMLDivElement | null {
+  if (!DEBUG_ENABLED) return null;
+  
   if (!debugPanel) {
     debugPanel = createDebugPanel();
   }
@@ -63,7 +70,11 @@ function getDebugPanel(): HTMLDivElement {
 }
 
 export function addDebugMessage(prefix: string, message: string, data?: unknown) {
+  // Skip if debug is disabled
+  if (!DEBUG_ENABLED) return;
+  
   const panel = getDebugPanel();
+  if (!panel) return;
   const messageEl = document.createElement('div');
   messageEl.style.cssText = `
     padding: 4px 0;
@@ -112,7 +123,11 @@ export function addDebugMessage(prefix: string, message: string, data?: unknown)
 }
 
 export function clearDebugMessages() {
+  if (!DEBUG_ENABLED) return;
+  
   const panel = getDebugPanel();
+  if (!panel) return;
+  
   panel.innerHTML = '';
   messageCount = 0;
 }

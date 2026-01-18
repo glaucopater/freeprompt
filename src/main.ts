@@ -1,16 +1,107 @@
 import "./style.css";
 import { updateHealthcheckStatusInterval, setupEvents } from "./setup.ts";
 import { addDebugMessage } from "./utils/debug-panel.ts";
+import { DEBUG_ENABLED, debugLog } from "./utils/debug.ts";
+
+// ============================================
+// VISIBLE DEBUG PANEL FOR MOBILE TESTING
+// Shows debug info directly on the page
+// Only active when VITE_ENABLE_DEBUG=true
+// ============================================
+function showMobileDebug(message: string, data?: Record<string, unknown>) {
+  if (!DEBUG_ENABLED) return;
+  let debugDiv = document.getElementById('mobile-debug-panel');
+  if (!debugDiv) {
+    debugDiv = document.createElement('div');
+    debugDiv.id = 'mobile-debug-panel';
+    debugDiv.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      max-height: 50vh;
+      overflow-y: auto;
+      background: rgba(0,0,0,0.9);
+      color: #0f0;
+      font-family: monospace;
+      font-size: 11px;
+      padding: 8px;
+      z-index: 999999;
+      white-space: pre-wrap;
+      word-break: break-all;
+    `;
+    // Add close button
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = 'X Close Debug';
+    closeBtn.style.cssText = 'position:sticky;top:0;background:red;color:white;border:none;padding:4px 8px;margin-bottom:8px;';
+    closeBtn.onclick = () => debugDiv?.remove();
+    debugDiv.appendChild(closeBtn);
+    debugDiv.appendChild(document.createElement('hr'));
+    document.body.appendChild(debugDiv);
+  }
+  const line = document.createElement('div');
+  line.style.borderBottom = '1px solid #333';
+  line.style.paddingBottom = '4px';
+  line.style.marginBottom = '4px';
+  const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+  line.textContent = `[${timestamp}] ${message}`;
+  if (data) {
+    line.textContent += '\n' + JSON.stringify(data, null, 2);
+  }
+  debugDiv.appendChild(line);
+}
+
+// Debug initialization - only runs when DEBUG_ENABLED
+if (DEBUG_ENABLED) {
+  debugLog('SHARE', 'Page loaded with URL: ' + window.location.href);
+  debugLog('SHARE', 'Search params: ' + window.location.search);
+}
+
+// Show initial page state (showMobileDebug already checks DEBUG_ENABLED)
+showMobileDebug('PAGE LOADED', {
+  url: window.location.href,
+  search: window.location.search,
+  pathname: window.location.pathname,
+  hasShareParam: window.location.search.includes('share'),
+  sessionStorageKeys: Object.keys(sessionStorage),
+  hasSharedContent: !!sessionStorage.getItem('sharedContent')
+});
+
+// Check caches immediately
+if ('caches' in window) {
+  caches.keys().then(names => {
+    showMobileDebug('CACHE NAMES', { caches: names });
+    // Check share cache specifically
+    caches.open('freeprompt-share-target').then(cache => {
+      cache.keys().then(keys => {
+        showMobileDebug('SHARE CACHE CONTENTS', { 
+          count: keys.length,
+          urls: keys.map(k => k.url)
+        });
+      });
+    });
+  });
+}
+
+// Note: showMobileDebug is only used internally and checks DEBUG_ENABLED
 
 // Wait for DOM to be ready before initializing debug panel
 // The debug panel needs document.body to exist
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
-    addDebugMessage('APP', 'Main script loading...');
+    addDebugMessage('APP', 'Main script loading...', {
+      url: window.location.href,
+      search: window.location.search,
+      hasSessionStorage: !!sessionStorage.getItem('sharedContent')
+    });
   });
 } else {
   // DOM already loaded
-  addDebugMessage('APP', 'Main script loading...');
+  addDebugMessage('APP', 'Main script loading...', {
+    url: window.location.href,
+    search: window.location.search,
+    hasSessionStorage: !!sessionStorage.getItem('sharedContent')
+  });
 }
 
 // Debug: Check service worker registration status
@@ -446,99 +537,254 @@ window.addEventListener('load', () => {
   }
 });
 
-// CRITICAL: Set up service worker message listener IMMEDIATELY
-// This must be done before any other code runs, so messages aren't missed
-// But we need to ensure DOM is ready for debug messages
-function setupServiceWorkerMessageListener() {
-  if ('serviceWorker' in navigator) {
-    // Use setTimeout to ensure DOM is ready for debug messages
-    setTimeout(() => {
-      addDebugMessage('APP', 'Setting up service worker message listener...');
-    }, 0);
+// Constants for share target (must match service-worker.js)
+const SHARE_CACHE_NAME = 'freeprompt-share-target';
+const SHARE_URL_PREFIX = '/shared-media/';
+
+// Check for shared files in cache (Google Chrome sample pattern)
+// This is called when the app loads with ?share=true query parameter
+async function checkForSharedFiles() {
+  debugLog('SHARE', 'checkForSharedFiles called');
+  showMobileDebug('checkForSharedFiles called');
+  addDebugMessage('APP', 'Checking for shared files in cache...');
+  
+  try {
+    // First, list all caches to see what exists
+    const allCacheNames = await caches.keys();
+    debugLog('SHARE', 'All cache names: ' + allCacheNames.join(', '));
+    showMobileDebug('All caches', { names: allCacheNames });
     
-    // Listen for messages from service worker (for share target)
-    navigator.serviceWorker.addEventListener('message', (event) => {
-      // Use setTimeout to ensure DOM is ready
-      setTimeout(() => {
-        addDebugMessage('APP', 'Service worker message received', { 
-          type: event.data?.type,
-          hasData: !!event.data 
-        });
-      }, 0);
-      
-      // Handle debug messages from service worker
-      if (event.data && event.data.type === 'DEBUG_MESSAGE') {
-        setTimeout(() => {
-          addDebugMessage(event.data.prefix || 'SW', event.data.message, event.data.data);
-        }, 0);
-        return;
-      }
-      
-      // Process SHARED_CONTENT messages with direct file object
-      if (event.data && event.data.type === 'SHARED_CONTENT') {
-        const file = event.data.file;
-        const text = event.data.text;
-        const title = event.data.title;
-        const urlParam = event.data.url;
-        
-        setTimeout(() => {
-          addDebugMessage('APP', 'SHARED_CONTENT received from service worker', {
-            hasFile: !!file,
-            fileName: file instanceof File ? file.name : 'N/A',
-            fileSize: file instanceof File ? file.size : 0,
-            fileType: file instanceof File ? file.type : 'N/A',
-            hasText: !!text,
-            hasTitle: !!title,
-            hasUrl: !!urlParam
-          });
-        }, 0);
-        
-        if (file && file instanceof File) {
-          // File object received directly - process it immediately
-          setTimeout(() => {
-            addDebugMessage('APP', `Processing file directly: ${file.name}`);
-          }, 0);
-          
-          // Wait for DOM to be ready before accessing file input
-          const processFile = () => {
-            const fileInput = document.getElementById("file-input") as HTMLInputElement;
-            if (fileInput) {
-              // Create a FileList with the shared file
-              const dataTransfer = new DataTransfer();
-              dataTransfer.items.add(file);
-              fileInput.files = dataTransfer.files;
-              
-              // Dispatch change event to trigger existing upload handlers
-              fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-              addDebugMessage('APP', `✅ File added to input: ${file.name} (${file.size} bytes)`);
-            } else {
-              addDebugMessage('APP', '❌ File input element not found');
-            }
-          };
-          
-          if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', processFile);
-          } else {
-            processFile();
-          }
-        } else if (text || title || urlParam) {
-          // Text-only share - could be handled separately if needed
-          setTimeout(() => {
-            addDebugMessage('APP', 'Text-only share received', { text, title, url: urlParam });
-          }, 0);
-        } else {
-          setTimeout(() => {
-            addDebugMessage('APP', '⚠️ SHARED_CONTENT received but no file or text data');
-          }, 0);
-        }
-        return;
-      }
+    const cache = await caches.open(SHARE_CACHE_NAME);
+    const keys = await cache.keys();
+    
+    debugLog('SHARE', 'Share cache keys: ' + keys.map(r => r.url).join(', '));
+    showMobileDebug('Share cache contents', { 
+      count: keys.length,
+      urls: keys.map(r => r.url)
     });
+    addDebugMessage('APP', `Found ${keys.length} items in share cache`);
+    
+    // Find entries with our share URL prefix
+    const sharedFileKeys = keys.filter(request => 
+      request.url.includes(SHARE_URL_PREFIX)
+    );
+    
+    if (sharedFileKeys.length === 0) {
+      addDebugMessage('APP', 'No shared files found in cache');
+      return;
+    }
+    
+    addDebugMessage('APP', `Found ${sharedFileKeys.length} shared files`);
+    
+    // Process the most recent shared file (last one)
+    const mostRecentKey = sharedFileKeys[sharedFileKeys.length - 1];
+    const response = await cache.match(mostRecentKey);
+    
+    if (response) {
+      const blob = await response.blob();
+      const contentType = response.headers.get('content-type') || 'application/octet-stream';
+      
+      // Extract filename from cache key URL
+      const urlParts = mostRecentKey.url.split('/');
+      const filenameWithTimestamp = urlParts[urlParts.length - 1];
+      // Remove timestamp prefix (format: timestamp-filename)
+      const filename = filenameWithTimestamp.replace(/^\d+-/, '') || 'shared-file';
+      
+      const file = new File([blob], filename, { type: contentType });
+      
+      addDebugMessage('APP', `Retrieved shared file: ${filename} (${file.size} bytes, ${contentType})`);
+      
+      // Add file to input
+      const addFileToInput = () => {
+        const fileInput = document.getElementById("file-input") as HTMLInputElement;
+        if (fileInput) {
+          const dataTransfer = new DataTransfer();
+          dataTransfer.items.add(file);
+          fileInput.files = dataTransfer.files;
+          fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+          addDebugMessage('APP', `✅ Shared file added to input: ${filename}`);
+        } else {
+          // Retry if file input not found yet
+          setTimeout(addFileToInput, 100);
+        }
+      };
+      
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', addFileToInput);
+      } else {
+        addFileToInput();
+      }
+      
+      // Clean up: delete processed file from cache
+      await cache.delete(mostRecentKey);
+      addDebugMessage('APP', 'Cleaned up shared file from cache');
+    }
+    
+    // Clean up URL (remove ?share=true)
+    if (window.location.search.includes('share=true')) {
+      history.replaceState({}, document.title, window.location.pathname);
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    addDebugMessage('APP', `❌ Error checking shared files: ${errorMessage}`);
   }
 }
 
-// Set up service worker message listener
-setupServiceWorkerMessageListener();
+// Check for shared files from sessionStorage (Netlify function fallback)
+// The Netlify function stores file in sessionStorage when SW isn't installed
+function checkSessionStorageForSharedFiles() {
+  debugLog('SHARE', 'checkSessionStorageForSharedFiles called');
+  showMobileDebug('checkSessionStorageForSharedFiles called');
+  addDebugMessage('APP', 'Checking sessionStorage for shared files...');
+  
+  try {
+    const sharedContentStr = sessionStorage.getItem('sharedContent');
+    debugLog('SHARE', 'sessionStorage sharedContent: ' + (sharedContentStr ? `Found (${sharedContentStr.length} chars)` : 'NOT FOUND'));
+    showMobileDebug('sessionStorage.sharedContent', { 
+      exists: !!sharedContentStr,
+      length: sharedContentStr?.length || 0
+    });
+    
+    if (!sharedContentStr) {
+      addDebugMessage('APP', 'No shared content in sessionStorage');
+      showMobileDebug('❌ No sharedContent in sessionStorage');
+      return false;
+    }
+    
+    const sharedContent = JSON.parse(sharedContentStr);
+    addDebugMessage('APP', 'Found shared content in sessionStorage', {
+      filename: sharedContent.filename,
+      type: sharedContent.type,
+      mimetype: sharedContent.mimetype,
+      size: sharedContent.base64?.length || 0
+    });
+    
+    // Remove from sessionStorage immediately to prevent re-processing
+    sessionStorage.removeItem('sharedContent');
+    
+    if (sharedContent.base64 && sharedContent.filename && sharedContent.mimetype) {
+      // Convert base64 to File and add to input
+      const addFileToInput = () => {
+        const fileInput = document.getElementById("file-input") as HTMLInputElement;
+        if (fileInput) {
+          const blob = b64toBlob(sharedContent.base64, sharedContent.mimetype);
+          const file = new File([blob], sharedContent.filename, { type: sharedContent.mimetype });
+          
+          const dataTransfer = new DataTransfer();
+          dataTransfer.items.add(file);
+          fileInput.files = dataTransfer.files;
+          fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+          
+          addDebugMessage('APP', `✅ Shared file from sessionStorage added: ${sharedContent.filename}`);
+        } else {
+          // Retry if file input not found yet
+          setTimeout(addFileToInput, 100);
+        }
+      };
+      
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', addFileToInput);
+      } else {
+        addFileToInput();
+      }
+      
+      return true;
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    addDebugMessage('APP', `❌ Error reading sessionStorage: ${errorMessage}`);
+  }
+  
+  return false;
+}
+
+// Check for shared files on page load
+// Service worker redirects to /?share=true, Netlify function redirects to /?shared=true
+const hasShareParam = window.location.search.includes('share=true') || window.location.search.includes('shared=true');
+
+debugLog('SHARE', `hasShareParam: ${hasShareParam}, search: ${window.location.search}`);
+showMobileDebug('SHARE PARAM CHECK', { 
+  hasShareParam, 
+  search: window.location.search,
+  includes_share: window.location.search.includes('share')
+});
+
+if (hasShareParam) {
+  showMobileDebug('✅ SHARE PARAM DETECTED - Starting file check...');
+  debugLog('SHARE', 'Share param detected! Checking for shared files...');
+  addDebugMessage('APP', 'Share redirect detected', { url: window.location.search });
+  
+  // First, check sessionStorage (from Netlify function fallback)
+  showMobileDebug('Checking sessionStorage...');
+  const foundInSessionStorage = checkSessionStorageForSharedFiles();
+  showMobileDebug('SessionStorage result', { found: foundInSessionStorage });
+  
+  if (!foundInSessionStorage) {
+    // If not in sessionStorage, check Cache Storage (from service worker)
+    showMobileDebug('Not in sessionStorage, checking Cache Storage...');
+    addDebugMessage('APP', 'Not in sessionStorage, checking Cache Storage...');
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(() => {
+        showMobileDebug('SW ready, calling checkForSharedFiles...');
+        checkForSharedFiles();
+      }).catch((err) => {
+        showMobileDebug('SW not ready, trying anyway...', { error: String(err) });
+        // Try anyway even if service worker isn't ready
+        checkForSharedFiles();
+      });
+    } else {
+      showMobileDebug('No SW support, calling checkForSharedFiles...');
+      checkForSharedFiles();
+    }
+  } else {
+    showMobileDebug('✅ Found in sessionStorage!');
+    // Clean up URL
+    if (window.location.search) {
+      history.replaceState({}, document.title, window.location.pathname);
+    }
+  }
+} else {
+  showMobileDebug('❌ NO share param in URL');
+}
+
+// Set up BroadcastChannel listener for share target notifications
+// This matches the channel used by the service worker
+const SHARE_CHANNEL_NAME = 'share-target-channel';
+if ('BroadcastChannel' in window) {
+  const shareChannel = new BroadcastChannel(SHARE_CHANNEL_NAME);
+  shareChannel.addEventListener('message', (event) => {
+    const data = event.data;
+    if (data && data.type) {
+      switch (data.type) {
+        case 'SHARE_STARTED':
+          addDebugMessage('SW', '📥 ' + (data.message || 'Processing shared content...'));
+          break;
+        case 'SHARE_COMPLETE':
+          addDebugMessage('SW', '✅ ' + (data.message || 'Share complete'), {
+            filename: data.filename,
+            size: data.size,
+            contentType: data.contentType
+          });
+          break;
+        case 'SHARE_ERROR':
+          addDebugMessage('SW', '❌ ' + (data.message || 'Share error'));
+          break;
+        default:
+          addDebugMessage('SW', 'Share channel message', data);
+      }
+    }
+  });
+  addDebugMessage('APP', 'BroadcastChannel listener set up for share notifications');
+}
+
+// Also set up message listener for debug messages from service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'DEBUG_MESSAGE') {
+      addDebugMessage(event.data.prefix || 'SW', event.data.message, event.data.data);
+    }
+  });
+}
 
 // Also listen for window messages (for compatibility)
 window.addEventListener('message', (event) => {

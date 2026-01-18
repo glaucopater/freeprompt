@@ -1,15 +1,25 @@
 // Cache versioning: Use build-time version or commit ref for automatic cache invalidation
 // Netlify provides COMMIT_REF, or we can use a timestamp-based version
 // This ensures new deployments automatically invalidate old caches
-const CACHE_VERSION = 'v1'; // This will be replaced at build time with actual version
+const CACHE_VERSION = 'v4-debug-cleanup'; // Cache version for deployment
 const CACHE_NAME = `freeprompt-cache-${CACHE_VERSION}`;
 
-// Don't cache index.html - it changes with each build and contains asset hashes
-// Caching it causes 404s when old HTML references new asset hashes
+// Cache name for shared files (separate from app cache)
+const SHARE_CACHE_NAME = 'freeprompt-share-target';
+// URL prefix for cached shared files - used to identify them later
+const SHARE_URL_PREFIX = '/shared-media/';
+
+// BroadcastChannel for sending notifications to the app (Google Chrome sample pattern)
+// This provides user feedback when files are being processed
+const SHARE_CHANNEL_NAME = 'share-target-channel';
+const broadcastChannel = 'BroadcastChannel' in self ? new BroadcastChannel(SHARE_CHANNEL_NAME) : null;
+
+// Don't cache index.html or hashed assets - they change with each build
+// The browser will cache hashed assets automatically (immutable headers)
+// We only cache static assets that don't change
 const urlsToCache = [
   '/favicon.png',
-  '/images/logo-no-bg.png',
-  // Add other static assets you want to cache
+  // Don't cache hashed JS/CSS - they're cached by browser with immutable headers
 ];
 
 self.addEventListener('install', (event) => {
@@ -17,10 +27,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.warn('Opened cache');
-        return cache.addAll(urlsToCache);
-      })
+      .then((cache) => cache.addAll(urlsToCache))
   );
 });
 
@@ -28,18 +35,6 @@ self.addEventListener('install', (event) => {
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
-  } else if (event.data && event.data.type === 'PING') {
-    // Respond to ping to confirm service worker is active
-    self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(clients => {
-      if (clients.length > 0) {
-        clients[0].postMessage({
-          type: 'DEBUG_MESSAGE',
-          prefix: 'SW',
-          message: 'Service Worker is active and responding to PING',
-          data: { state: 'active' }
-        });
-      }
-    }).catch(() => {});
   }
 });
 
@@ -47,191 +42,79 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   const requestPath = url.pathname;
   
-  // CRITICAL: Handle Web Share Target API POST requests ONLY
+  // Handle Web Share Target API POST requests ONLY
   // EXACT match + POST only - this prevents interfering with normal app assets
-  if (event.request.method === 'POST' && requestPath === '/share-target/') {
-    // Send debug message immediately (non-blocking)
-    self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(clients => {
-      if (clients.length > 0) {
-        clients[0].postMessage({
-          type: 'DEBUG_MESSAGE',
-          prefix: 'SW',
-          message: '✅ Share target POST intercepted!',
-          data: { path: requestPath, url: event.request.url, resultingClientId: event.resultingClientId }
-        });
-      }
-    }).catch(() => {});
-    
-    // MUST call respondWith to intercept the request
+  if (event.request.method === 'POST' && (requestPath === '/share-target/' || requestPath === '/share-target')) {
     event.respondWith(handleShareTarget(event));
-    return; // Exit early - don't process further
+    return;
   }
   
   // Let ALL other fetches pass normally (don't intercept)
-  // This prevents the service worker from interfering with asset loading
-  // and avoids infinite redirect loops
 });
 
 // Handle Web Share Target API POST requests
+// Based on Google Chrome web-share sample pattern
+// Store files in Cache API FIRST, then redirect. App reads from cache on load.
 async function handleShareTarget(event) {
-  const url = new URL(event.request.url);
-  
   try {
+    // Notify app that we're processing a shared file
+    if (broadcastChannel) {
+      broadcastChannel.postMessage({ type: 'SHARE_STARTED', message: 'Saving shared media...' });
+    }
+    
     const formData = await event.request.formData();
-    const file = formData.get('photos'); // Matches manifest.json param name
-    const text = formData.get('text');
-    const title = formData.get('title');
-    const urlParam = formData.get('url');
+    const mediaFile = formData.get('photos'); // Matches manifest.json param name
     
-    // Use resultingClientId (newer, more reliable) - this is the client that will receive the response
-    let targetClient = null;
-    if (event.resultingClientId) {
-      try {
-        targetClient = await self.clients.get(event.resultingClientId);
-        if (targetClient) {
-          targetClient.postMessage({
-            type: 'DEBUG_MESSAGE',
-            prefix: 'SW',
-            message: 'Found client via resultingClientId',
-            data: { resultingClientId: event.resultingClientId }
-          });
-        }
-      } catch {
-        // If we can't get the specific client, try to match all clients
-        const allClients = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
-        if (allClients.length > 0) {
-          targetClient = allClients[0];
-          targetClient.postMessage({
-            type: 'DEBUG_MESSAGE',
-            prefix: 'SW',
-            message: 'Fallback: using first available client',
-            data: { clientsCount: allClients.length }
-          });
-        }
-      }
-    } else {
-      // Fallback: get any available client
-      const allClients = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
-      if (allClients.length > 0) {
-        targetClient = allClients[0];
-        targetClient.postMessage({
-          type: 'DEBUG_MESSAGE',
-          prefix: 'SW',
-          message: 'No resultingClientId, using first available client',
-          data: { clientsCount: allClients.length }
-        });
-      }
-    }
-    
-    // Send debug message about form data
-    if (targetClient) {
-      targetClient.postMessage({
-        type: 'DEBUG_MESSAGE',
-        prefix: 'SW',
-        message: 'Form data received',
-        data: {
-          hasFile: !!file,
-          fileType: file instanceof File ? file.type : 'not a file',
-          fileName: file instanceof File ? file.name : 'N/A',
-          fileSize: file instanceof File ? file.size : 0,
-          text: text || 'none',
-          title: title || 'none',
-          url: urlParam || 'none'
-        }
-      });
-    }
-    
-    // Forward file object directly to the app window via postMessage
-    // File objects CAN be transferred via postMessage (they're supported by structured clone)
-    if (targetClient && file && file instanceof File) {
-      try {
-        // Send the File object directly - it can be transferred via postMessage
-        targetClient.postMessage({
-          type: 'SHARED_CONTENT',
-          file: file, // File object passes fully via structured clone
-          text: text || null,
-          title: title || null,
-          url: urlParam || null
-        });
-        
-        targetClient.postMessage({
-          type: 'DEBUG_MESSAGE',
-          prefix: 'SW',
-          message: `✅ File forwarded to app: ${file.name} (${file.size} bytes)`,
-          data: { fileName: file.name, fileSize: file.size, fileType: file.type }
-        });
-      } catch (e) {
-        // If File object can't be transferred, log error
-        // e is used in the error message below
-        if (targetClient) {
-          targetClient.postMessage({
-            type: 'DEBUG_MESSAGE',
-            prefix: 'SW',
-            message: `❌ Error forwarding file: ${e.message || String(e)}`,
-            data: { error: e.message || String(e) }
-          });
-        }
-      }
-    } else if (targetClient && (text || title || urlParam)) {
-      // Text-only share
-      targetClient.postMessage({
-        type: 'SHARED_CONTENT',
-        file: null,
-        text: text || null,
-        title: title || null,
-        url: urlParam || null
-      });
+    if (mediaFile && mediaFile instanceof File && mediaFile.name) {
+      // Store the shared file in cache
+      const cache = await caches.open(SHARE_CACHE_NAME);
       
-      targetClient.postMessage({
-        type: 'DEBUG_MESSAGE',
-        prefix: 'SW',
-        message: 'Text-only share forwarded to app',
-        data: { text: text || 'none', title: title || 'none' }
-      });
+      // Create a unique cache key using URL prefix + timestamp + filename
+      const cacheKey = new URL(
+        `${SHARE_URL_PREFIX}${Date.now()}-${mediaFile.name}`,
+        self.location
+      ).href;
+      
+      // Store file as a Response object in cache
+      await cache.put(
+        cacheKey,
+        new Response(mediaFile, {
+          headers: {
+            'content-length': mediaFile.size,
+            'content-type': mediaFile.type,
+          },
+        })
+      );
+      
+      // Notify app that file was saved successfully
+      if (broadcastChannel) {
+        broadcastChannel.postMessage({ 
+          type: 'SHARE_COMPLETE', 
+          message: `Saved: ${mediaFile.name}`,
+          filename: mediaFile.name,
+          size: mediaFile.size,
+          contentType: mediaFile.type
+        });
+      }
     } else {
-      // No client available or no data
-      if (targetClient) {
-        targetClient.postMessage({
-          type: 'DEBUG_MESSAGE',
-          prefix: 'SW',
-          message: '⚠️ No file or text data to forward',
-          data: { hasFile: !!file, hasText: !!text, hasClient: !!targetClient }
-        });
+      // No valid file found
+      if (broadcastChannel) {
+        broadcastChannel.postMessage({ type: 'SHARE_ERROR', message: 'No valid file found in share data' });
       }
     }
     
-    // Redirect to app (this opens the app window)
-    // Use absolute URL to avoid redirect loops
-    const redirectUrl = new URL('/', event.request.url);
-    if (targetClient) {
-      targetClient.postMessage({
-        type: 'DEBUG_MESSAGE',
-        prefix: 'SW',
-        message: `Redirecting to: ${redirectUrl.toString()}`,
-        data: { redirectUrl: redirectUrl.toString() }
-      });
-    }
-    
-    return Response.redirect(redirectUrl.toString(), 303);
+    // Redirect to app - the app will check for shared files in cache on load
+    return Response.redirect('/?share=true', 303);
   } catch (error) {
-    console.error('Error handling share target:', error);
-    // Try to send error to client
-    try {
-      const clients = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
-      if (clients.length > 0) {
-        clients[0].postMessage({
-          type: 'DEBUG_MESSAGE',
-          prefix: 'SW',
-          message: `❌ Error handling share target: ${error.message || String(error)}`,
-          data: { error: error.message || String(error) }
-        });
-      }
-    } catch {
-      // Ignore
+    console.error('SW: Error handling share target:', error);
+    
+    // Notify app of error
+    if (broadcastChannel) {
+      broadcastChannel.postMessage({ type: 'SHARE_ERROR', message: `Error: ${error.message || error}` });
     }
+    
     // Redirect to app even on error
-    // Use absolute URL to avoid redirect loops
-    return Response.redirect(new URL('/', url.origin).toString(), 303);
+    return Response.redirect('/', 303);
   }
 }
 
@@ -310,45 +193,21 @@ async function _storeShareData(shareId, data) {
 }
 
 self.addEventListener('activate', (event) => {
-  // Send debug message
-  self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(clients => {
-    if (clients.length > 0) {
-      clients[0].postMessage({
-        type: 'DEBUG_MESSAGE',
-        prefix: 'SW',
-        message: 'Service Worker activating...',
-        data: { cacheName: CACHE_NAME }
-      });
-    }
-  }).catch(() => {});
-  
   // Clean up old caches: delete all caches that don't match the current cache name
-  // This ensures new deployments automatically invalidate prior PWA caches
+  // IMPORTANT: Keep the share cache (SHARE_CACHE_NAME) for share target functionality!
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          // Delete all caches that don't match the current cache name
-          if (cacheName !== CACHE_NAME) {
+          // Delete old app caches, but KEEP the share cache!
+          if (cacheName !== CACHE_NAME && cacheName !== SHARE_CACHE_NAME) {
             return caches.delete(cacheName);
           }
         })
       );
     }).then(() => {
       // Take control of all clients immediately
-      return self.clients.claim().then(() => {
-        // Send confirmation
-        return self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(clients => {
-          if (clients.length > 0) {
-            clients[0].postMessage({
-              type: 'DEBUG_MESSAGE',
-              prefix: 'SW',
-              message: '✅ Service Worker activated and claimed clients',
-              data: { clientsCount: clients.length }
-            });
-          }
-        });
-      });
+      return self.clients.claim();
     })
   );
 });
