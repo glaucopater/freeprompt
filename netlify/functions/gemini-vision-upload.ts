@@ -66,11 +66,37 @@ export const handler: Handler = async (event) => {
       };
     } catch (error) {
       console.error("Error analyzing image:", error);
+      
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Check for rate limit / quota exhausted errors from Gemini API
+      const isRateLimited = 
+        errorMessage.includes('RESOURCE_EXHAUSTED') ||
+        errorMessage.includes('quota') ||
+        errorMessage.includes('rate limit') ||
+        errorMessage.includes('429') ||
+        errorMessage.includes('Too Many Requests');
+      
+      if (isRateLimited) {
+        return {
+          statusCode: 429,
+          body: JSON.stringify({
+            error: "Rate limit exceeded",
+            errorType: "RATE_LIMIT",
+            details: "Daily API quota exhausted. Please try again tomorrow.",
+          }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+        };
+      }
+      
       return {
         statusCode: 500,
         body: JSON.stringify({
           error: "Failed to analyze image",
-          details: error instanceof Error ? error.message : String(error),
+          errorType: "SERVER_ERROR",
+          details: errorMessage,
         }),
         headers: {
           "Content-Type": "application/json",

@@ -674,7 +674,12 @@ export const setupEvents = () => {
 
         const data = await response.json();
         
-        // Check for error response
+        // Check for rate limit error
+        if (response.status === 429 || data.errorType === "RATE_LIMIT") {
+          throw new Error("RATE_LIMIT:" + (data.details || "Daily API quota exhausted. Please try again tomorrow."));
+        }
+        
+        // Check for other error responses
         if (!response.ok || data.error) {
           throw new Error(data.error || data.details || "Analysis failed");
         }
@@ -706,6 +711,17 @@ export const setupEvents = () => {
         );
 
         const data = await response.json();
+        
+        // Check for rate limit error
+        if (response.status === 429 || data.errorType === "RATE_LIMIT") {
+          throw new Error("RATE_LIMIT:" + (data.details || "Daily API quota exhausted. Please try again tomorrow."));
+        }
+        
+        // Check for other error responses
+        if (!response.ok || data.error) {
+          throw new Error(data.error || data.details || "Analysis failed");
+        }
+        
         const analysisAudioData = parseAudioResponseData(
           data.message,
           data.metadata
@@ -731,12 +747,37 @@ export const setupEvents = () => {
         resultsContainer.innerHTML = "";
         const errorSection = document.createElement("div");
         errorSection.className = "card shadow-sm bg-white rounded-3 p-4";
-        const errorBody = document.createElement("div");
-        errorBody.className = "text-danger text-center py-4";
-        // Show more details if available
+        
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        errorBody.textContent = `Error analyzing file: ${errorMessage}`;
-        errorSection.append(errorBody);
+        const isRateLimited = errorMessage.startsWith("RATE_LIMIT:");
+        
+        if (isRateLimited) {
+          // Rate limit specific UI
+          const errorIcon = document.createElement("div");
+          errorIcon.className = "text-center mb-3";
+          errorIcon.innerHTML = '<span style="font-size: 48px;">⏳</span>';
+          
+          const errorTitle = document.createElement("h5");
+          errorTitle.className = "text-warning text-center mb-2";
+          errorTitle.textContent = "API Quota Exhausted";
+          
+          const errorBody = document.createElement("div");
+          errorBody.className = "text-muted text-center py-2";
+          errorBody.textContent = "Daily requests for Gemini API have been exhausted. Please try again tomorrow.";
+          
+          const errorHint = document.createElement("small");
+          errorHint.className = "text-muted text-center d-block mt-3";
+          errorHint.textContent = "Free tier limits reset daily at midnight Pacific Time.";
+          
+          errorSection.append(errorIcon, errorTitle, errorBody, errorHint);
+        } else {
+          // Generic error UI
+          const errorBody = document.createElement("div");
+          errorBody.className = "text-danger text-center py-4";
+          errorBody.textContent = `Error analyzing file: ${errorMessage}`;
+          errorSection.append(errorBody);
+        }
+        
         resultsContainer.append(errorSection);
         resultsContainer.classList.add("fade-in");
       }
