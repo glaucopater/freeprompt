@@ -17,17 +17,15 @@ export function ResponseVisionComponent(
 ): HTMLDivElement {
   const container = document.createElement("div");
   container.id = "response-component";
-  container.className = "d-flex flex-column gap-3 h-100";
+  container.className = "flex flex-col gap-3 h-100";
 
   if (!analysisData) {
     const loadingSection = document.createElement("div");
-    loadingSection.className = "card shadow-sm bg-white rounded-3 p-4 h-100";
+    loadingSection.className = "card p-4 h-100";
     const loadingBody = document.createElement("div");
-    loadingBody.className = "d-flex justify-content-center align-items-center h-100 py-4";
+    loadingBody.className = "flex justify-center items-center h-100 py-4";
     loadingBody.innerHTML = `
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Loading...</span>
-      </div>
+      <div class="spinner" role="status" aria-label="Loading"></div>
     `;
     loadingSection.append(loadingBody);
     container.append(loadingSection);
@@ -37,9 +35,8 @@ export function ResponseVisionComponent(
 
   // Description Section
   const descriptionSection = document.createElement("div");
-  descriptionSection.className = "card shadow-sm bg-white rounded-3 p-4";
+  descriptionSection.className = "card p-4";
   const descriptionBody = document.createElement("div");
-  descriptionBody.className = "";
   descriptionBody.append(SectionTitle("📝", "Description"));
 
   const description = document.createElement("p");
@@ -51,18 +48,16 @@ export function ResponseVisionComponent(
 
   // Categories Section
   const categoriesSection = document.createElement("div");
-  categoriesSection.className = "card shadow-sm bg-white rounded-3 p-4";
+  categoriesSection.className = "card p-4";
   const categoriesBody = document.createElement("div");
-  categoriesBody.className = "";
   categoriesBody.append(SectionTitle("🏷️", "Categories"));
 
   const categoriesContainer = document.createElement("div");
-  categoriesContainer.className = "d-flex flex-wrap gap-2";
+  categoriesContainer.className = "flex flex-wrap gap-2";
 
   analysisData.categories.forEach((category) => {
     const tag = document.createElement("span");
-    tag.className =
-      "badge bg-primary-subtle text-primary rounded-pill px-3 py-2";
+    tag.className = "badge";
     tag.textContent = category;
     categoriesContainer.append(tag);
   });
@@ -72,13 +67,12 @@ export function ResponseVisionComponent(
 
   // Color Palette Section
   const paletteSection = document.createElement("div");
-  paletteSection.className = "card shadow-sm bg-white rounded-3 p-4";
+  paletteSection.className = "card p-4";
   const paletteBody = document.createElement("div");
-  paletteBody.className = "";
   paletteBody.append(SectionTitle("🎨", "Color Palette"));
 
   const paletteContainer = document.createElement("div");
-  paletteContainer.className = "d-flex gap-4 flex-wrap";
+  paletteContainer.className = "flex gap-4 flex-wrap";
 
   analysisData.palette.forEach((color) => {
     paletteContainer.append(ColorSwatch(color));
@@ -89,9 +83,8 @@ export function ResponseVisionComponent(
 
   // Image Stats Section
   const imageStatsSection = document.createElement("div");
-  imageStatsSection.className = "card shadow-sm bg-white rounded-3 p-4";
+  imageStatsSection.className = "card p-4";
   const imageStatsBody = document.createElement("div");
-  imageStatsBody.className = "";
   imageStatsBody.append(SectionTitle("📊", "Image Stats"));
 
   const imageStatsInfo = document.createElement("p");
@@ -115,9 +108,8 @@ export function ResponseVisionComponent(
 
   // Processing Time Section
   const timeSection = document.createElement("div");
-  timeSection.className = "card shadow-sm bg-white rounded-3 p-4";
+  timeSection.className = "card p-4";
   const timeBody = document.createElement("div");
-  timeBody.className = "";
   timeBody.append(SectionTitle("⏱️", "Processing Time"));
 
   const timeInfo = document.createElement("p");
@@ -138,17 +130,15 @@ export function ResponseHearingComponent(
 ): HTMLDivElement {
   const container = document.createElement("div");
   container.id = "response-component";
-  container.className = "d-flex flex-column gap-3 h-100";
+  container.className = "flex flex-col gap-3 h-100";
 
   if (!analysisData) {
     const loadingSection = document.createElement("div");
-    loadingSection.className = "card shadow-sm bg-white rounded-3 p-4 h-100";
+    loadingSection.className = "card p-4 h-100";
     const loadingBody = document.createElement("div");
-    loadingBody.className = "d-flex justify-content-center align-items-center h-100 py-4";
+    loadingBody.className = "flex justify-center items-center h-100 py-4";
     loadingBody.innerHTML = `
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Loading...</span>
-      </div>
+      <div class="spinner" role="status" aria-label="Loading"></div>
     `;
     loadingSection.append(loadingBody);
     container.append(loadingSection);
@@ -158,9 +148,8 @@ export function ResponseHearingComponent(
 
   // Transcript Section
   const transcriptSection = document.createElement("div");
-  transcriptSection.className = "card shadow-sm bg-white rounded-3 p-4";
+  transcriptSection.className = "card p-4";
   const transcriptBody = document.createElement("div");
-  transcriptBody.className = "";
   transcriptBody.append(SectionTitle("🎤", "Transcript"));
 
   const transcript = document.createElement("p");
@@ -172,9 +161,8 @@ export function ResponseHearingComponent(
 
   // Language Section
   const languageSection = document.createElement("div");
-  languageSection.className = "card shadow-sm bg-white rounded-3 p-4";
+  languageSection.className = "card p-4";
   const languageBody = document.createElement("div");
-  languageBody.className = "";
   languageBody.append(SectionTitle("🌐", "Language Details"));
 
   const languageInfo = document.createElement("p");
@@ -191,9 +179,8 @@ export function ResponseHearingComponent(
   const processingTime = ((Date.now() - startTime) / 1000).toFixed(3);
 
   const timeSection = document.createElement("div");
-  timeSection.className = "card shadow-sm bg-white rounded-3 p-4";
+  timeSection.className = "card p-4";
   const timeBody = document.createElement("div");
-  timeBody.className = "";
   timeBody.append(SectionTitle("⏱️", "Processing Time"));
 
   const timeInfo = document.createElement("p");

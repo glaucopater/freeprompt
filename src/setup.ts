@@ -1,5 +1,3 @@
-import "bootstrap/dist/css/bootstrap.min.css";
-import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import {
   convertWebPToPNGBase64,
   formatFileSize,
@@ -28,9 +26,46 @@ import { ResponseHearingComponent } from "./components/ResponseHearingComponent"
 
 let eventsAreSetup = false;
 
+function setupTabs() {
+  const analyzeTab = document.getElementById("analyze-tab");
+  const generateTab = document.getElementById("generate-tab");
+  const analyzePane = document.getElementById("analyze-tab-pane");
+  const generatePane = document.getElementById("generate-tab-pane");
+  if (!analyzeTab || !generateTab || !analyzePane || !generatePane) return;
+
+  const showPanel = (panelId: string) => {
+    [analyzePane, generatePane].forEach((el) => {
+      el.classList.toggle("is-active", el.id === panelId);
+    });
+    [analyzeTab, generateTab].forEach((el) => {
+      el.setAttribute("aria-selected", el.id === (panelId === "analyze-tab-pane" ? "analyze-tab" : "generate-tab") ? "true" : "false");
+    });
+  };
+
+  analyzeTab.addEventListener("click", () => showPanel("analyze-tab-pane"));
+  generateTab.addEventListener("click", () => showPanel("generate-tab-pane"));
+}
+
+function setupModal() {
+  const overlay = document.getElementById("upload-modal");
+  const closeBtn = overlay?.querySelector("[data-modal-close]");
+  if (!overlay) return;
+
+  closeBtn?.addEventListener("click", () => {
+    overlay.classList.remove("is-open");
+  });
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) overlay.classList.remove("is-open");
+  });
+}
+
 export const setupEvents = () => {
   if (eventsAreSetup) return;
   eventsAreSetup = true;
+
+  setupTabs();
+  setupModal();
+
   // region Upload Area
   const uploadImageArea: HTMLElement | null =
     document.getElementById("upload-area");
@@ -293,7 +328,7 @@ export const setupEvents = () => {
         // If server provided placeholder, show it
         if (data.dataUri && generatedMediaContainer) {
           const img = document.createElement("img");
-          img.className = "img-fluid";
+          img.className = "img-fluid rounded";
           img.alt = "Generated media (placeholder)";
           img.src = data.dataUri;
           generatedMediaContainer.innerHTML = "";
@@ -361,7 +396,7 @@ export const setupEvents = () => {
 
         if (title) {
           const titleEl = document.createElement("h3");
-          titleEl.className = "fs-5 fw-semibold text-dark mb-2";
+          titleEl.className = "fw-semibold mb-2";
           titleEl.textContent = title;
           generatedMediaContainer.appendChild(titleEl);
         }
@@ -746,7 +781,7 @@ export const setupEvents = () => {
       if (resultsContainer) {
         resultsContainer.innerHTML = "";
         const errorSection = document.createElement("div");
-        errorSection.className = "card shadow-sm bg-white rounded-3 p-4";
+        errorSection.className = "card p-4";
         
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
         const isRateLimited = errorMessage.startsWith("RATE_LIMIT:");
