@@ -175,7 +175,6 @@ if ('serviceWorker' in navigator) {
 import appDetails from "../package.json";
 import logo from "./assets/images/logo-no-bg.png";
 import { Footer } from "./components/Footer.ts";
-import { Status } from "./components/Status.ts";
 import { Header } from "./components/Header.ts";
 import { VisionExperiment } from "./components/VideoExperiment.ts";
 import { UploadFilesCard } from "./components/UploadImageCard.ts";
@@ -245,12 +244,27 @@ appDiv.innerHTML = `
         ${mediaGeneratorContent}
       </div>
     </div>
-    ${Status()}
     ${Footer(appDetails)}
   </div>
 `;
 
 initMasonryBackground();
+
+// Handle theme toggle
+const themeToggle = document.getElementById('theme-toggle') as HTMLInputElement;
+if (themeToggle) {
+  const updateTheme = () => {
+    if (themeToggle.checked) {
+      document.documentElement.classList.add('dark-mode');
+    } else {
+      document.documentElement.classList.remove('dark-mode');
+    }
+  };
+  
+  themeToggle.addEventListener('change', updateTheme);
+  // Initialize theme based on checkbox state
+  updateTheme();
+}
 
 // Handle shared content after the DOM is rendered
 const urlParams = new URLSearchParams(window.location.search);
@@ -510,7 +524,6 @@ if (sharedImageBase64 && sharedFilename && sharedMimetype) {
     <div class="app-shell flex flex-col min-vh-100">
       ${Header(logo)}
       <div class="mt-4 flex-1">${renderShareTargetContent()}</div>
-      ${Status()}
       ${Footer(appDetails)}
     </div>
   `;

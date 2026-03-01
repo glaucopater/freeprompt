@@ -13,7 +13,33 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* Design tokens (HSL space-separated for hsl(var(--x))) */
+  /* Design tokens (HSL space-separated for hsl(var(--x))) - Light Mode */
+  --background: 0 0% 100%;
+  --foreground: 0 0% 9%;
+  --card: 0 0% 98%;
+  --card-foreground: 0 0% 9%;
+  --primary: 200 80% 55%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 96%;
+  --secondary-foreground: 0 0% 9%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 45%;
+  --border: 0 0% 90%;
+  --input: 0 0% 90%;
+  --ring: 200 80% 55%;
+  --radius: 0.75rem;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --glass-bg: 0 0% 100% / 0.8;
+  --glass-border: 0 0% 90% / 0.6;
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  --destructive: 0 70% 50%;
+  --destructive-foreground: 0 0% 98%;
+}
+
+/* Dark mode via checkbox toggle */
+html:has(#theme-toggle:checked) {
+  /* Design tokens (HSL space-separated for hsl(var(--x))) - Dark Mode */
   --background: 220 20% 6%;
   --foreground: 210 20% 92%;
   --card: 220 20% 10%;
@@ -35,6 +61,32 @@ html {
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   --destructive: 0 70% 50%;
   --destructive-foreground: 210 40% 98%;
+}
+
+/* Light mode via checkbox toggle (force light when unchecked) */
+html:not(:has(#theme-toggle:checked)) {
+  /* Design tokens (HSL space-separated for hsl(var(--x))) - Light Mode */
+  --background: 0 0% 100%;
+  --foreground: 0 0% 9%;
+  --card: 0 0% 98%;
+  --card-foreground: 0 0% 9%;
+  --primary: 200 80% 55%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 96%;
+  --secondary-foreground: 0 0% 9%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 45%;
+  --border: 0 0% 90%;
+  --input: 0 0% 90%;
+  --ring: 200 80% 55%;
+  --radius: 0.75rem;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --glass-bg: 0 0% 100% / 0.6;
+  --glass-border: 0 0% 90% / 0.4;
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  --destructive: 0 70% 50%;
+  --destructive-foreground: 0 0% 98%;
 }
 
 * {
@@ -69,7 +121,7 @@ a:hover {
   flex-direction: column;
   max-width: 1400px;
   margin: 0 auto;
-  padding: 0 1rem 1rem;
+  padding: 0 1rem 5rem;
   text-align: left;
   z-index: 1;
 }
@@ -81,6 +133,7 @@ a:hover {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  padding-bottom: 80px;
 }
 
 /* Layout */
@@ -156,7 +209,7 @@ a:hover {
   font-size: 0.875rem;
   font-weight: 500;
   color: hsl(var(--muted-foreground));
-  background: transparent;
+  background: hsla(var(--glass-bg));
   border: none;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
@@ -176,10 +229,13 @@ a:hover {
 }
 
 .tab-panels {
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsla(var(--glass-border));
   border-top: 0;
-  border-radius: 0 0 var(--radius) var(--radius);
-  background: hsl(var(--card));
+  border-radius: var(--radius);
+  background: hsla(var(--glass-bg));
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   padding: 1.5rem;
   min-height: 500px;
 }
@@ -414,7 +470,7 @@ textarea.form-control {
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: var(--radius-md);
   z-index: 0;
 }
@@ -497,12 +553,76 @@ textarea.form-control {
 /* Header / Footer / Status */
 .site-header,
 header {
-  padding: 1rem;
+  padding: 1.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 1.25rem;
   color: hsl(var(--foreground));
+  background: hsla(var(--glass-bg));
+  border: 1px solid hsla(var(--glass-border));
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: var(--radius);
+}
+
+/* Theme toggle */
+.theme-toggle {
+  position: relative;
+}
+
+.theme-toggle-checkbox {
+  display: none;
+}
+
+.theme-toggle-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 24px;
+  background: hsl(var(--secondary));
+  border: 1px solid hsl(var(--border));
+  border-radius: 9999px;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+.theme-toggle-label:hover {
+  background: hsl(var(--muted));
+}
+
+.theme-toggle-icon {
+  position: absolute;
+  font-size: 14px;
+  transition: transform 0.3s, opacity 0.3s;
+}
+
+.theme-toggle-icon:first-child {
+  transform: translateX(-12px);
+  opacity: 1;
+}
+
+.theme-toggle-icon:last-child {
+  transform: translateX(12px);
+  opacity: 0;
+}
+
+.theme-toggle-checkbox:checked + .theme-toggle-label {
+  background: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+}
+
+.theme-toggle-checkbox:checked + .theme-toggle-label .theme-toggle-icon:first-child {
+  transform: translateX(-12px);
+  opacity: 0;
+}
+
+.theme-toggle-checkbox:checked + .theme-toggle-label .theme-toggle-icon:last-child {
+  transform: translateX(12px);
+  opacity: 1;
 }
 
 .header-content {
@@ -521,17 +641,28 @@ header h1 {
 
 .site-header h2,
 header h2 {
-  font-size: 1.125rem;
+  font-size: 1.5rem;
   margin: 0;
   font-weight: 400;
   color: hsl(var(--muted-foreground));
 }
 
-.logo {
+.logo-wrapper {
+  display: inline-block;
   padding: 0.5em;
-  height: 80px;
+}
+
+.logo {
+  height: 100px;
   width: auto;
   display: block;
+}
+
+/* Radial gradient background for logo in dark mode */
+html.dark-mode .logo-wrapper {
+  background: radial-gradient(circle at center, #fff, #000) !important;
+  border-radius: 50%;
+  padding: 0.5em;
 }
 
 footer {
@@ -539,7 +670,17 @@ footer {
   text-align: center;
   color: hsl(var(--muted-foreground));
   font-size: 0.875rem;
-  margin-top: auto;
+  background: hsla(var(--glass-bg));
+  border: 1px solid hsla(var(--glass-border));
+  border-radius: var(--radius);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  margin-top: 1.5rem;
+}
+
+footer p {
+  margin: 0;
 }
 
 footer p {
