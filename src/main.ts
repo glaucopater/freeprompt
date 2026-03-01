@@ -175,35 +175,30 @@ if ('serviceWorker' in navigator) {
 import appDetails from "../package.json";
 import logo from "./assets/images/logo-no-bg.png";
 import { Footer } from "./components/Footer.ts";
-import { Status } from "./components/Status.ts";
 import { Header } from "./components/Header.ts";
 import { VisionExperiment } from "./components/VideoExperiment.ts";
 import { UploadFilesCard } from "./components/UploadImageCard.ts";
 import { UploadProgressModal } from "./components/UploadProgressModal.ts";
 import { GenerateMediaCard } from "./components/GenerateMediaCard.ts";
+import { initMasonryBackground } from "./components/MasonryBackground.ts";
 
 const isMediaGeneratorEnabled =
   import.meta.env.VITE_ENABLE_MEDIA_GENERATOR === "true";
 
 const mediaGeneratorTab = isMediaGeneratorEnabled
-  ? `
- <li class="nav-item" role="presentation">
-    <button class="nav-link" id="generate-tab" data-bs-toggle="tab" data-bs-target="#generate-tab-pane" type="button" role="tab" aria-controls="generate-tab-pane" aria-selected="false">Generate Image</button>
- </li>`
+  ? `<button id="generate-tab" type="button" role="tab" aria-controls="generate-tab-pane" aria-selected="false">Generate Image</button>`
   : "";
 
 const mediaGeneratorContent = isMediaGeneratorEnabled
-  ? `<div class="tab-pane" id="generate-tab-pane" role="tabpanel" aria-labelledby="generate-tab" tabindex="0">'
-    ${GenerateMediaCard()}
-  </div>`
+  ? `<div class="tab-panel" id="generate-tab-pane" role="tabpanel" aria-labelledby="generate-tab" tabindex="0">${GenerateMediaCard()}</div>`
   : "";
 
 function renderShareTargetContent() {
   return `
-    <div class="container mt-4">
-      <h2>Content Received</h2>
-      <p>Your shared content has been received and is being processed.</p>
-      <p>Please check the Netlify Function logs for details.</p>
+    <div class="glass-card mt-4">
+      <h2 class="fw-semibold mb-2">Content Received</h2>
+      <p class="text-secondary mb-0">Your shared content has been received and is being processed.</p>
+      <p class="text-muted text-sm mt-2">Please check the Netlify Function logs for details.</p>
     </div>
   `;
 }
@@ -232,27 +227,44 @@ const appDiv = document.querySelector<HTMLDivElement>("#app")!;
 
 // Render the main app structure first
 appDiv.innerHTML = `
-  <div class="min-vh-100 d-flex flex-column">
+  <div id="masonry-bg" class="masonry-bg" aria-hidden="true"></div>
+  <div class="app-shell flex flex-col min-vh-100">
     ${Header(logo)}
-    <div class="container mt-4">
-      <ul class="nav nav-tabs" id="myTab" role="tablist">
-        <li class="nav-item" role="presentation">
-          <button class="nav-link active" id="analyze-tab" data-bs-toggle="tab" data-bs-target="#analyze-tab-pane" type="button" role="tab" aria-controls="analyze-tab-pane" aria-selected="true">Analyze Media</button>
+    <div class="mt-4 flex-1">
+      <ul class="tabs-list" id="myTab" role="tablist">
+        <li role="presentation">
+          <button id="analyze-tab" type="button" role="tab" aria-controls="analyze-tab-pane" aria-selected="true">Analyze Media</button>
         </li>
-         ${mediaGeneratorTab}           
+        ${isMediaGeneratorEnabled ? '<li role="presentation">' + mediaGeneratorTab + '</li>' : ''}
       </ul>
-      <div class="tab-content" id="myTabContent">
-        <div class="tab-pane show active" id="analyze-tab-pane" role="tabpanel" aria-labelledby="analyze-tab" tabindex="0">
+      <div class="tab-panels" id="myTabContent">
+        <div class="tab-panel is-active" id="analyze-tab-pane" role="tabpanel" aria-labelledby="analyze-tab" tabindex="0">
           ${VisionExperiment(UploadFilesCard(UploadProgressModal()))}
         </div>
-        ${mediaGeneratorContent}      
+        ${mediaGeneratorContent}
       </div>
     </div>
-
-    ${Status()}
     ${Footer(appDetails)}
   </div>
 `;
+
+initMasonryBackground();
+
+// Handle theme toggle
+const themeToggle = document.getElementById('theme-toggle') as HTMLInputElement;
+if (themeToggle) {
+  const updateTheme = () => {
+    if (themeToggle.checked) {
+      document.documentElement.classList.add('dark-mode');
+    } else {
+      document.documentElement.classList.remove('dark-mode');
+    }
+  };
+  
+  themeToggle.addEventListener('change', updateTheme);
+  // Initialize theme based on checkbox state
+  updateTheme();
+}
 
 // Handle shared content after the DOM is rendered
 const urlParams = new URLSearchParams(window.location.search);
@@ -508,13 +520,14 @@ if (sharedImageBase64 && sharedFilename && sharedMimetype) {
   // This block handles the case where the share target was hit, but no sharedImage/Audio param was found
   // (e.g., if the Netlify function redirected without an image/audio, or if it was a text share)
   appDiv.innerHTML = `
-    <div class="min-vh-100 d-flex flex-column">
+    <div id="masonry-bg" class="masonry-bg" aria-hidden="true"></div>
+    <div class="app-shell flex flex-col min-vh-100">
       ${Header(logo)}
-      ${renderShareTargetContent()}
-      ${Status()}
+      <div class="mt-4 flex-1">${renderShareTargetContent()}</div>
       ${Footer(appDetails)}
     </div>
   `;
+  initMasonryBackground();
   history.replaceState({}, document.title, "/");
 }
 

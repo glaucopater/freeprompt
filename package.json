@@ -1,6 +1,6 @@
 {
   "name": "freeprompt",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Media classifier based on LLM API integration",
   "type": "module",
   "volta": {
@@ -45,6 +45,7 @@
     "@popperjs/core": "^2.11.8",
     "bootstrap": "^5.3.3",
     "busboy": "^1.6.0",
+    "chrome-devtools-mcp": "^0.18.1",
     "dotenv": "^16.4.7",
     "ntl": "^5.1.0",
     "sharp": "^0.34.3"

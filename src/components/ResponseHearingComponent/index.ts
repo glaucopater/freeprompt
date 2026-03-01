@@ -7,17 +7,15 @@ export function ResponseHearingComponent(
 ): HTMLDivElement {
   const container = document.createElement("div");
   container.id = "response-component";
-  container.className = "d-flex flex-column gap-3 h-100";
+  container.className = "flex flex-col gap-3 h-100";
 
   if (!analysisData) {
     const loadingSection = document.createElement("div");
-    loadingSection.className = "card shadow-sm bg-white rounded-3 p-4 h-100";
+    loadingSection.className = "card p-4 h-100";
     const loadingBody = document.createElement("div");
-    loadingBody.className = "d-flex justify-content-center align-items-center h-100 py-4";
+    loadingBody.className = "flex justify-center items-center h-100 py-4";
     loadingBody.innerHTML = `
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Loading...</span>
-      </div>
+      <div class="spinner" role="status" aria-label="Loading"></div>
     `;
     loadingSection.append(loadingBody);
     container.append(loadingSection);
@@ -27,13 +25,12 @@ export function ResponseHearingComponent(
   // Audio Player Section (if audio source is provided)
   if (audioSrc) {
     const audioSection = document.createElement("div");
-    audioSection.className = "card shadow-sm bg-white rounded-3 p-4";
+    audioSection.className = "card p-4";
     const audioBody = document.createElement("div");
-    audioBody.className = "";
     audioBody.append(SectionTitle("🎵", "Audio File"));
 
     const audio = document.createElement("audio");
-    audio.className = "w-100";
+    audio.className = "w-100 mt-2";
     audio.controls = true;
     audio.src = audioSrc;
     audioBody.append(audio);
@@ -43,9 +40,8 @@ export function ResponseHearingComponent(
 
   // Transcript Section
   const transcriptSection = document.createElement("div");
-  transcriptSection.className = "card shadow-sm bg-white rounded-3 p-4";
+  transcriptSection.className = "card p-4";
   const transcriptBody = document.createElement("div");
-  transcriptBody.className = "";
   transcriptBody.append(SectionTitle("🎤", "Transcript"));
 
   const transcript = document.createElement("p");
@@ -58,9 +54,8 @@ export function ResponseHearingComponent(
 
   // Language Section
   const languageSection = document.createElement("div");
-  languageSection.className = "card shadow-sm bg-white rounded-3 p-4";
+  languageSection.className = "card p-4";
   const languageBody = document.createElement("div");
-  languageBody.className = "";
   languageBody.append(SectionTitle("🌐", "Language Details"));
 
   const languageInfo = document.createElement("p");
@@ -71,9 +66,8 @@ export function ResponseHearingComponent(
 
   // Processing Time Section
   const timeSection = document.createElement("div");
-  timeSection.className = "card shadow-sm bg-white rounded-3 p-4";
+  timeSection.className = "card p-4";
   const timeBody = document.createElement("div");
-  timeBody.className = "";
   timeBody.append(SectionTitle("⏱️", "Processing Time"));
 
   const timeInfo = document.createElement("p");

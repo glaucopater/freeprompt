@@ -22,6 +22,8 @@ Upload a file (limited to 4MB in size) and get a classification of it. The promp
 
 ![Preview](doc/preview.png)
 
+![Preview](doc/preview_dark.png)
+
 ## Why These AI Services? 🤖
 
 ### Gemini AI
