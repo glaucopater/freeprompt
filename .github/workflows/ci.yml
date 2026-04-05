@@ -2,29 +2,53 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+    steps:
+      # 1. Checkout code (v6)
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      # 2. Install and enable Corepack/Yarn BEFORE setup-node does its Yarn checks
+      - name: Install and enable Corepack (Yarn Modern)
+        run: |
+          npm install -g corepack
+          corepack enable
+          corepack install
+
+      # 3. Setup Node.js with Yarn cache (v6)
+      - name: Setup Node.js with Yarn cache
+        uses: actions/setup-node@v6
         with:
           node-version: '24'
-          cache: 'yarn'
+          cache: yarn
+          cache-dependency-path: yarn.lock
 
-      - name: Enable Corepack
-        run: corepack enable
+      # 4. Re-enable Corepack (setup-node may override bundled tooling)
+      - name: Re-enable Corepack
+        run: |
+          npm install -g corepack
+          corepack enable
+          corepack install
 
+      # 5. Show versions
+      - name: Show versions
+        run: |
+          echo "which node:" && which node || echo "no node"
+          echo "which corepack:" && which corepack || echo "no corepack"
+          echo "which yarn:" && which yarn || echo "no yarn"
+          echo "node -v:" && node -v
+          echo "yarn -v:" && yarn -v
+
+      # 6. Install deps (with retry for transient registry errors)
       - name: Install dependencies
-        run: yarn install --immutable
+        run: yarn install --immutable || yarn install --immutable
 
       - name: Run TypeScript type check
         run: yarn tsc --noEmit

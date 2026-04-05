@@ -16,7 +16,7 @@ A hassle-free Progressive Web App (PWA) to test LLM API for free with media clas
 - **Auto Image Resize**: Automatic image optimization before analysis
 - **Multiple AI Models**: Choose from various Gemini models based on speed/quality needs
 
-## Image Classification with Gen AI (Gemini)
+## Image and Audio classification with Generative AI (Gemini LLM)
 
 Upload a file (limited to 4MB in size) and get a classification of it. The prompt adopts [few-shots technique](https://www.promptingguide.ai/techniques/fewshot).
 
@@ -30,7 +30,7 @@ Upload a file (limited to 4MB in size) and get a classification of it. The promp
 Because compared to other LLMs in the market, it still provides API access without any payment method setup. There are naturally limitations, but if you want to start testing GenAI API integration, this is a possible method.
 
 ### Reve AI
-[Reve AI](https://reve.ai/) is an alternative image generation service that provides high-quality AI-generated images. It's integrated as an additional option for image generation alongside Gemini.
+[Reve AI](https://reve.com/) is an alternative image generation service that provides high-quality AI-generated images. It's integrated as an additional option for image generation alongside Gemini.
 
 The implementation is totally TypeScript-based. To have secure access to the APIs, a [BFF](https://en.wikipedia.org/wiki/Frontend_and_backend#Software_definitions) adopting Netlify serverless functions is used. Why Netlify and their serverless functions? Because they are free and easy to set up.
 
