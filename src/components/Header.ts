@@ -1,6 +1,8 @@
 export const Header = (logo: string) => `<header class="site-header">
   <div class="logo-wrapper">
+  <a href="/">
     <img src="${logo}" alt="FreePrompt" title="FreePrompt" class="logo" />
+  </a>
   </div>
   <div class="header-content">
     <h2>Media classifier based on LLM API</h2>
