@@ -9,6 +9,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # Optional: force JS actions to Node 24 during the transition window
+    # env:
+    #   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout code
@@ -21,15 +24,22 @@ jobs:
           cache: 'yarn'
           cache-dependency-path: yarn.lock
 
+      - name: Remove global Yarn 1
+        run: sudo rm -f /usr/local/bin/yarn /usr/local/bin/yarnpkg || true
+
       - name: Enable Corepack
         run: corepack enable
 
-      - name: Activate project package manager
+      - name: Ensure project Yarn is installed
         run: corepack install
 
       - name: Show versions
         run: |
+          echo "which yarn:"
+          which yarn || echo "no yarn on PATH"
+          echo "node -v:"
           node -v
+          echo "yarn -v:"
           yarn -v
 
       - name: Install dependencies
