@@ -2,14 +2,14 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -19,12 +19,21 @@ jobs:
         with:
           node-version: '24'
           cache: 'yarn'
+          cache-dependency-path: yarn.lock
 
       - name: Enable Corepack
         run: corepack enable
 
+      - name: Activate project package manager
+        run: corepack install
+
+      - name: Show versions
+        run: |
+          node -v
+          yarn -v
+
       - name: Install dependencies
-        run: yarn install --immutable
+        run: yarn install --immutable || yarn install --immutable
 
       - name: Run TypeScript type check
         run: yarn tsc --noEmit
