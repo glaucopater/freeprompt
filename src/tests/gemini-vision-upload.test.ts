@@ -12,7 +12,7 @@ vi.mock("../../netlify/functions/prompts", () => ({
   VISION_PROMPTS: ["Describe the image"],
 }));
 vi.mock("../../netlify/functions/models", () => ({
-  DEFAULT_GEMINI_MODEL: "models/gemini-2.5-flash-lite",
+  DEFAULT_GEMINI_MODEL: "models/gemini-3.1-flash-lite",
 }));
 
 // Set env before importing handler - this must happen at module load time
@@ -94,7 +94,7 @@ describe("Image Analysis Function", () => {
     );
 
     const imageData = Buffer.from("fake-image-data").toString("base64");
-    const event = { body: JSON.stringify({ data: imageData, model: "models/gemini-2.5-flash-lite" }) };
+    const event = { body: JSON.stringify({ data: imageData, model: "models/gemini-3.1-flash-lite" }) };
 
     const result = (await handler(event as any, {} as any)) as HandlerResponse;
 
@@ -106,7 +106,7 @@ describe("Image Analysis Function", () => {
     expect(body.metadata).toBeDefined();
     expect(typeof body.metadata.processingTime).toBe("number");
     expect(body.metadata.timestamp).toBeDefined();
-    expect(body.metadata.model).toBe("models/gemini-2.5-flash-lite");
+    expect(body.metadata.model).toBe("models/gemini-3.1-flash-lite");
     
     expect(mockGenerateContent).toHaveBeenCalled();
   });

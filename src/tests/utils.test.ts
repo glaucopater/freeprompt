@@ -29,7 +29,7 @@ const analysisData: AnalysisVisionData = {
   ],
   palette: ["#000000", "#FFFFFF", "#FFA500", "#008000", "#808080"],
   processingTime: 0,
-  model: "models/gemini-2.5-flash-lite",
+  model: "models/gemini-3.1-flash-lite",
 };
 
 describe("parseResponseData", () => {

@@ -10,7 +10,7 @@ A hassle-free Progressive Web App (PWA) to test LLM API for free with media clas
 
 - **Image Classification**: Upload images and get AI-powered classification using Gemini API
 - **Audio Transcription**: Transcribe and translate audio files
-- **Image Generation**: Generate images using Gemini AI or Reve AI
+- **Image Generation**: Generate images using Gemini AI
 - **PWA Support**: Install as a native app on mobile and desktop
 - **Web Share Target**: Share images directly from your gallery or other apps
 - **Auto Image Resize**: Automatic image optimization before analysis
@@ -24,13 +24,9 @@ Upload a file (limited to 4MB in size) and get a classification of it. The promp
 
 ![Preview](doc/preview_dark.png)
 
-## Why These AI Services? 🤖
+## Why Gemini? 🤖
 
-### Gemini AI
 Because compared to other LLMs in the market, it still provides API access without any payment method setup. There are naturally limitations, but if you want to start testing GenAI API integration, this is a possible method.
-
-### Reve AI
-[Reve AI](https://reve.com/) is an alternative image generation service that provides high-quality AI-generated images. It's integrated as an additional option for image generation alongside Gemini.
 
 The implementation is totally TypeScript-based. To have secure access to the APIs, a [BFF](https://en.wikipedia.org/wiki/Frontend_and_backend#Software_definitions) adopting Netlify serverless functions is used. Why Netlify and their serverless functions? Because they are free and easy to set up.
 
@@ -51,7 +47,6 @@ graph TB
             Resize[resize-image]
             ShareFn[share-target]
             GenGemini[gemini-generate-images]
-            GenReve[reve-generate-images]
             Health[healthcheck]
         end
         Static[Static Assets]
@@ -59,7 +54,6 @@ graph TB
 
     subgraph External["External Services"]
         Gemini[Google Gemini API]
-        Reve[Reve AI API]
     end
 
     UI -->|Upload File| Resize
@@ -73,9 +67,6 @@ graph TB
 
     UI -->|Generate Image| GenGemini
     GenGemini -->|API Request| Gemini
-    
-    UI -->|Generate Image| GenReve
-    GenReve -->|API Request| Reve
 
     SW -->|Intercept Share| Cache
     Cache -->|Retrieve File| UI
@@ -153,23 +144,13 @@ sequenceDiagram
 
 ## Image Generation 🎨
 
-Generate images using AI with two available providers:
-
-### Gemini AI Image Generation
-Uses Google's Gemini models capable of generating images from text prompts.
-
-### Reve AI Image Generation
-Alternative image generation using [Reve AI](https://reve.ai/) API for high-quality image creation.
+Generate images using Google's Gemini models from text prompts.
 
 ```mermaid
 flowchart LR
-    A[Enter Prompt] --> B{Select Provider}
-    B -->|Gemini| C[gemini-generate-images]
-    B -->|Reve| D[reve-generate-images]
-    C --> E[Gemini API]
-    D --> F[Reve API]
-    E --> G[Return Generated Image]
-    F --> G
+    A[Enter Prompt] --> B[gemini-generate-images]
+    B --> C[Gemini API]
+    C --> D[Return Generated Image]
 ```
 
 ## Image Resize and Upload Flow
@@ -216,13 +197,10 @@ The resize function returns:
    yarn
    ```
 
-2. Create `.env` file with your API keys:
+2. Create `.env` file with your API key:
    ```sh
-   # Required for image/audio analysis
+   # Required for image/audio analysis and image generation
    NETLIFY_GOOGLE_API_KEY=your_gemini_api_key_here
-   
-   # Optional: for Reve AI image generation
-   NETLIFY_REVE_API_KEY=your_reve_api_key_here
    ```
 
 3. Create a new website on Netlify:
@@ -266,15 +244,18 @@ This enables:
 
 ## Available Models
 
-| Model | Average Time |
-|-------|-------------|
-| gemini-2.5-pro | 13.530s |
-| gemini-2.5-flash | 8.115s |
-| gemini-2.5-flash-lite | 2.189s |
-| gemini-2.0-flash | 3.024s |
-| gemini-2.0-flash-lite | 3.530s |
-| gemini-1.5-flash | 3.703s |
-| gemini-1.5-flash-8b | 3.203s |
+Current models (as of July 2026). See [Google deprecations](https://ai.google.dev/gemini-api/docs/deprecations) for shutdown dates.
+
+| Model | Role | Notes |
+|-------|------|-------|
+| gemini-3.1-flash-lite | Default | GA, best cost/throughput |
+| gemini-3.5-flash | General | GA, agentic and coding |
+| gemini-3.1-pro-preview | Reasoning | Preview, complex tasks |
+| gemini-2.5-flash-lite | General | Deprecated Oct 2026 |
+| gemini-2.5-flash | General | Deprecated Oct 2026 |
+| gemini-2.5-pro | Reasoning | Deprecated Oct 2026 |
+| gemini-3.1-flash-image | Image gen | GA (default for generation) |
+| gemini-2.5-flash-image | Image gen | Deprecated Oct 2026 |
 
 ## Project Structure 📁
 
@@ -286,8 +267,7 @@ freeprompt/
 │   └── functions/           # Serverless functions
 │       ├── gemini-vision-upload.ts   # Image analysis
 │       ├── gemini-hearing-upload.ts  # Audio transcription
-│       ├── gemini-generate-images.ts # Image generation (Gemini)
-│       ├── reve-generate-images.ts   # Image generation (Reve AI)
+│       ├── gemini-generate-images.ts # Image generation
 │       ├── resize-image.ts           # Image preprocessing
 │       └── share-target.ts           # Share target fallback
 ├── src/
