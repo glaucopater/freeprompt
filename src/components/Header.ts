@@ -5,7 +5,7 @@ export const Header = (logo: string) => `<header class="site-header">
   </a>
   </div>
   <div class="header-content">
-    <h2>Media classifier based on LLM API</h2>
+    <h2>Media classifier based on free LLM APIs</h2>
   </div>
   <div class="theme-toggle">
     <input type="checkbox" id="theme-toggle" class="theme-toggle-checkbox" />
