@@ -138,6 +138,9 @@ export default defineConfig(({ mode }) => {
 
 /assets/*.png
   Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.webp
+  Cache-Control: public, max-age=31536000, immutable
 `;
           try {
             writeFileSync(headersPath, headersContent, "utf-8");
