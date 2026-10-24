@@ -1,9 +1,13 @@
+export type VisionPromptSource = "custom" | "default";
+
 export interface AnalysisVisionData {
   description: string;
   categories: string[];
   palette: string[];
   processingTime: number;
   model: string;
+  /** "custom" when the user's own prompt replaced the default one. */
+  promptSource?: VisionPromptSource;
   imageStats?: {
     originalSize: number;
     resizedSize: number;

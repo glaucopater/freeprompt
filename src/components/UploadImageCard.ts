@@ -1,4 +1,5 @@
 import { GEMINI_MODEL_INFO, DEFAULT_GEMINI_MODEL, NOT_SUPPORTED_FOR_IMAGE_ANALYSE } from "../../netlify/functions/models";
+import { CustomPromptField } from "./CustomPromptField";
 
 export const UploadFilesCard = (uploadProgressModal: string) => `
   <div class="glass-card">
@@ -32,6 +33,7 @@ export const UploadFilesCard = (uploadProgressModal: string) => `
             .join('')}
         </select>
       </div>
+      ${CustomPromptField()}
       <div class="form-check mt-2">
         <input class="form-check-input" type="checkbox" role="switch" id="auto-upload-switch" checked />
         <label class="form-check-label" for="auto-upload-switch">Auto-analyze</label>

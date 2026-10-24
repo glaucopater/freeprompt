@@ -42,44 +42,57 @@ export function ResponseVisionComponent(
   const description = document.createElement("p");
   description.className = "text-secondary mb-0 text-justify";
   description.style.textAlign = "justify";
+  // When the response does not carry the parsed structure it is shown raw,
+  // so keep its line breaks instead of collapsing them.
+  const hasParsedStructure =
+    analysisData.categories.length > 0 || analysisData.palette.length > 0;
+  description.style.whiteSpace = hasParsedStructure ? "normal" : "pre-line";
   description.textContent = analysisData.description;
   descriptionBody.append(description);
   descriptionSection.append(descriptionBody);
 
-  // Categories Section
-  const categoriesSection = document.createElement("div");
-  categoriesSection.className = "card p-4";
-  const categoriesBody = document.createElement("div");
-  categoriesBody.append(SectionTitle("🏷️", "Categories"));
+  const sections: HTMLElement[] = [descriptionSection];
 
-  const categoriesContainer = document.createElement("div");
-  categoriesContainer.className = "flex flex-wrap gap-2";
+  // Categories Section (only when the response provides them)
+  if (analysisData.categories.length > 0) {
+    const categoriesSection = document.createElement("div");
+    categoriesSection.className = "card p-4";
+    const categoriesBody = document.createElement("div");
+    categoriesBody.append(SectionTitle("🏷️", "Categories"));
 
-  analysisData.categories.forEach((category) => {
-    const tag = document.createElement("span");
-    tag.className = "badge";
-    tag.textContent = category;
-    categoriesContainer.append(tag);
-  });
+    const categoriesContainer = document.createElement("div");
+    categoriesContainer.className = "flex flex-wrap gap-2";
 
-  categoriesBody.append(categoriesContainer);
-  categoriesSection.append(categoriesBody);
+    analysisData.categories.forEach((category) => {
+      const tag = document.createElement("span");
+      tag.className = "badge";
+      tag.textContent = category;
+      categoriesContainer.append(tag);
+    });
 
-  // Color Palette Section
-  const paletteSection = document.createElement("div");
-  paletteSection.className = "card p-4";
-  const paletteBody = document.createElement("div");
-  paletteBody.append(SectionTitle("🎨", "Color Palette"));
+    categoriesBody.append(categoriesContainer);
+    categoriesSection.append(categoriesBody);
+    sections.push(categoriesSection);
+  }
 
-  const paletteContainer = document.createElement("div");
-  paletteContainer.className = "flex gap-4 flex-wrap";
+  // Color Palette Section (only when the response provides it)
+  if (analysisData.palette.length > 0) {
+    const paletteSection = document.createElement("div");
+    paletteSection.className = "card p-4";
+    const paletteBody = document.createElement("div");
+    paletteBody.append(SectionTitle("🎨", "Color Palette"));
 
-  analysisData.palette.forEach((color) => {
-    paletteContainer.append(ColorSwatch(color));
-  });
+    const paletteContainer = document.createElement("div");
+    paletteContainer.className = "flex gap-4 flex-wrap";
 
-  paletteBody.append(paletteContainer);
-  paletteSection.append(paletteBody);
+    analysisData.palette.forEach((color) => {
+      paletteContainer.append(ColorSwatch(color));
+    });
+
+    paletteBody.append(paletteContainer);
+    paletteSection.append(paletteBody);
+    sections.push(paletteSection);
+  }
 
   // Image Stats Section
   const imageStatsSection = document.createElement("div");
@@ -114,12 +127,14 @@ export function ResponseVisionComponent(
 
   const timeInfo = document.createElement("p");
   timeInfo.className = "text-secondary mb-0 text-start";
-  timeInfo.innerHTML = `<strong>Time:</strong> ${(analysisData.processingTime / 1000).toFixed(3)} seconds<br><strong>Model:</strong> ${analysisData.model}`;
+  const promptLabel = analysisData.promptSource === "custom" ? "Custom (user override)" : "Default";
+  timeInfo.innerHTML = `<strong>Time:</strong> ${(analysisData.processingTime / 1000).toFixed(3)} seconds<br><strong>Model:</strong> ${analysisData.model}<br><strong>Prompt:</strong> ${promptLabel}`;
   timeBody.append(timeInfo);
   timeSection.append(timeBody);
 
   // Combine all sections
-  container.append(descriptionSection, categoriesSection, paletteSection, imageStatsSection, timeSection);
+  sections.push(imageStatsSection, timeSection);
+  container.append(...sections);
 
   return container;
 }

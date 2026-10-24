@@ -73,6 +73,47 @@ describe("parseVisionResponseData", () => {
   });
 });
 
+describe("parseVisionResponseData with a custom prompt", () => {
+  const customMetadata = { ...mockMetadata, promptSource: "custom" as const };
+
+  it("keeps the raw response in the description when the shape does not match", () => {
+    const message = "**Response:**\nThis looks like a sunset photo over a lake.\n\nI would tag it as: nature, landscape";
+    const result = parseVisionResponseData(message, customMetadata);
+
+    expect(result.description).toEqual(message.trim());
+    expect(result.categories).toEqual([]);
+    expect(result.palette).toEqual([]);
+    expect(result.promptSource).toEqual("custom");
+  });
+
+  it("keeps the raw response when the answer is a single block of text", () => {
+    const message = "A cozy cabin at sunset, with smoke curling from the chimney.";
+    const result = parseVisionResponseData(message, customMetadata);
+
+    expect(result.description).toEqual(message);
+    expect(result.categories).toEqual([]);
+    expect(result.palette).toEqual([]);
+  });
+
+  it("still parses when the custom prompt follows the expected shape", () => {
+    const result = parseVisionResponseData(mockVisionResponseData[0], customMetadata);
+
+    expect(result.description).toEqual(
+      "A cartoon bee is illustrated with photography, settings, and social media symbols around it, suggesting a connection to digital services or marketing."
+    );
+    expect(result.categories).toEqual(["Illustration", "Mascot", "Icon"]);
+    expect(result.palette).toHaveLength(5);
+  });
+
+  it("does not change parsing for the default prompt", () => {
+    const result = parseVisionResponseData(mockVisionResponseData[1], mockMetadata);
+
+    expect(result.categories).toEqual(["Sci-fi", "fantasy", "space", "action", "digital art"]);
+    expect(result.palette).toHaveLength(5);
+    expect(result.promptSource).toBeUndefined();
+  });
+});
+
 describe("parseHearingResponseData", () => {
   it("should test a response mock 1", async () => {
     const response = mockHearingResponseData[0];

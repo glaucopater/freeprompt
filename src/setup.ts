@@ -4,6 +4,12 @@ import {
   parseAudioResponseData,
   parseVisionResponseData,
 } from "./utils";
+import {
+  DEFAULT_VISION_PROMPT,
+  clearCustomVisionPrompt,
+  readCustomVisionPrompt,
+  saveCustomVisionPrompt,
+} from "./utils/custom-prompt";
 import { FUNCTIONS_PATH, MAX_FILE_SIZE } from "./constants";
 import { ResponseVisionComponent } from "./components/ResponseVisionComponent";
 import { ResponseHearingComponent } from "./components/ResponseHearingComponent";
@@ -59,12 +65,37 @@ function setupModal() {
   });
 }
 
+/**
+ * Restores the persisted custom image-analysis prompt into the textarea and
+ * wires the "Show default prompt" shortcut. Returns the textarea so the
+ * analyze and reset handlers can read or clear it.
+ */
+function setupCustomPromptField() {
+  const customPromptField = document.getElementById(
+    "custom-prompt"
+  ) as HTMLTextAreaElement | null;
+  if (!customPromptField) return null;
+
+  const storedPrompt = readCustomVisionPrompt();
+  if (storedPrompt) customPromptField.value = storedPrompt;
+
+  document
+    .getElementById("custom-prompt-show-default")
+    ?.addEventListener("click", () => {
+      customPromptField.value = DEFAULT_VISION_PROMPT;
+      saveCustomVisionPrompt(DEFAULT_VISION_PROMPT);
+    });
+
+  return customPromptField;
+}
+
 export const setupEvents = () => {
   if (eventsAreSetup) return;
   eventsAreSetup = true;
 
   setupTabs();
   setupModal();
+  const customPromptField = setupCustomPromptField();
 
   // region Upload Area
   const uploadImageArea: HTMLElement | null =
@@ -110,6 +141,10 @@ export const setupEvents = () => {
     if (fileInput) fileInput.value = "";
     if (fileInfo) fileInfo.textContent = "";
     if (uploadButton) uploadButton.disabled = true;
+
+    // Clear the custom prompt so the default one is used again
+    if (customPromptField) customPromptField.value = "";
+    clearCustomVisionPrompt();
 
     // Reset image preview
     if (imagePreview) {
@@ -684,6 +719,11 @@ export const setupEvents = () => {
 
         // Then, send the resized image for analysis
         // Note: resize-image function always outputs JPEG, so use that mimeType
+        // Persist the custom prompt; an empty value makes the server use its default.
+        const customPrompt = saveCustomVisionPrompt(
+          customPromptField?.value ?? ""
+        );
+
         const response = await fetch(`${FUNCTIONS_PATH}/gemini-vision-upload`, {
           method: "POST",
           headers: {
@@ -693,6 +733,7 @@ export const setupEvents = () => {
             data: resizedBase64,
             model: selectedModel,
             mimeType: autoShrink ? "image/jpeg" : file.type, // Resize outputs JPEG; otherwise use original
+            prompt: customPrompt,
           }),
         });
 

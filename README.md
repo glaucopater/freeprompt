@@ -15,6 +15,7 @@ A hassle-free Progressive Web App (PWA) to test LLM API for free with media clas
 - **Web Share Target**: Share images directly from your gallery or other apps
 - **Auto Image Resize**: Automatic image optimization before analysis
 - **Multiple AI Models**: Choose from various Gemini models based on speed/quality needs
+- **Custom Prompt Override**: Replace the default image-analysis prompt with your own
 
 ## Image and Audio classification with Generative AI (Gemini LLM)
 
@@ -23,6 +24,24 @@ Upload a file (limited to 4MB in size) and get a classification of it. The promp
 ![Preview](doc/preview.png)
 
 ![Preview](doc/preview_dark.png)
+
+## Custom Prompt Override 🔁
+
+The Media Analyzer ships with a fixed image-analysis prompt (`VISION_PROMPTS[0]` in `netlify/functions/prompts.ts`). The optional **Custom prompt** field in the upload card replaces it:
+
+| Field value | Prompt sent to the API |
+| --- | --- |
+| Empty | `VISION_PROMPTS[0]` (default) |
+| Non-empty | your prompt, in full — the default is not appended |
+
+- The value is sent as `prompt` in the POST body of `/.netlify/functions/gemini-vision-upload`.
+- It is persisted in `localStorage` under `freeprompt.custom-vision-prompt`, so it survives reloads; **Reset** clears both the field and the stored value.
+- **Show default prompt** fills the textarea with the default text so you can edit it.
+- The results panel reports the prompt source (`Prompt: Custom (user override)` or `Prompt: Default`) in the Processing Time section.
+- A custom prompt can answer in any format. The reply is split into description/categories/palette only when it follows the expected shape (`src/utils/vision-shape.ts`); otherwise the **raw response** is shown in the Description panel (line breaks preserved) and the Categories and Color Palette panels are left out.
+- Audio transcription keeps using `AUDIO_PROMPTS[1]`; the override applies to image analysis only.
+
+Implementation: `src/utils/custom-prompt.ts` (storage + fallback logic), `src/components/CustomPromptField.ts` (UI), wired in `src/setup.ts`.
 
 ## Why Gemini? 🤖
 
@@ -274,7 +293,9 @@ freeprompt/
 │   ├── components/          # UI components
 │   ├── utils/
 │   │   ├── debug.ts         # Debug configuration
-│   │   └── debug-panel.ts   # Mobile debug panel
+│   │   ├── debug-panel.ts   # Mobile debug panel
+│   │   ├── custom-prompt.ts # Custom prompt storage + default fallback
+│   │   └── vision-shape.ts  # Response shape detection for parsed panels
 │   ├── main.ts              # App entry point + share handling
 │   └── setup.ts             # Event handlers + API calls
 ├── manifest.json            # PWA manifest with share_target

@@ -30,12 +30,16 @@ export const handler: Handler = async (event) => {
       const model = genAI.getGenerativeModel({ model: selectedModel });
       
       const startTime = Date.now();
-      const { data, mimeType } = parsedBody;
+      const { data, mimeType, prompt } = parsedBody;
       const imageResp = Buffer.from(data, "base64");
       
       // Use provided mimeType or default to jpeg
       // Gemini supports: image/png, image/jpeg, image/webp, image/heic, image/heif
       const actualMimeType = mimeType || "image/jpeg";
+      
+      // A non-empty prompt from the client replaces the default analysis prompt
+      const customPrompt = typeof prompt === "string" ? prompt.trim() : "";
+      const analysisPrompt = customPrompt || VISION_PROMPTS[0];
       
       const result = await model.generateContent([
         {
@@ -44,7 +48,7 @@ export const handler: Handler = async (event) => {
             mimeType: actualMimeType,
           },
         },
-        VISION_PROMPTS[0],
+        analysisPrompt,
       ]);
 
       const endTime = Date.now();
@@ -57,7 +61,8 @@ export const handler: Handler = async (event) => {
           metadata: {
             processingTime,
             timestamp: new Date().toISOString(),
-            model: selectedModel
+            model: selectedModel,
+            promptSource: customPrompt ? "custom" : "default"
           }
         }),
         headers: {

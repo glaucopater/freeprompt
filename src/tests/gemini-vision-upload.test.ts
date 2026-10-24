@@ -114,6 +114,68 @@ describe("Image Analysis Function", () => {
     expect(mockGenerateContent).toHaveBeenCalled();
   });
 
+  it("should use the custom prompt sent by the client", async () => {
+    const mockGenerateContent = vi.fn().mockResolvedValue({
+      response: { text: () => "Analyzed with custom prompt" },
+    });
+
+    vi.mocked(GoogleGenerativeAI).mockImplementation(
+      function () {
+        return {
+          getGenerativeModel: () => ({
+            generateContent: mockGenerateContent,
+          }),
+        } as any;
+      }
+    );
+
+    const imageData = Buffer.from("fake-image-data").toString("base64");
+    const event = {
+      body: JSON.stringify({
+        data: imageData,
+        mimeType: "image/jpeg",
+        prompt: "  List only the dominant colors  ",
+      }),
+    };
+
+    const result = (await handler(event as any, {} as any)) as HandlerResponse;
+
+    expect(result.statusCode).toBe(200);
+    const body = JSON.parse(result.body as string);
+    expect(body.metadata.promptSource).toBe("custom");
+
+    const [content] = mockGenerateContent.mock.calls[0];
+    expect(content[1]).toBe("List only the dominant colors");
+  });
+
+  it("should fall back to the default prompt when none is sent", async () => {
+    const mockGenerateContent = vi.fn().mockResolvedValue({
+      response: { text: () => "Analyzed with default prompt" },
+    });
+
+    vi.mocked(GoogleGenerativeAI).mockImplementation(
+      function () {
+        return {
+          getGenerativeModel: () => ({
+            generateContent: mockGenerateContent,
+          }),
+        } as any;
+      }
+    );
+
+    const imageData = Buffer.from("fake-image-data").toString("base64");
+    const event = { body: JSON.stringify({ data: imageData, prompt: "   " }) };
+
+    const result = (await handler(event as any, {} as any)) as HandlerResponse;
+
+    expect(result.statusCode).toBe(200);
+    const body = JSON.parse(result.body as string);
+    expect(body.metadata.promptSource).toBe("default");
+
+    const [content] = mockGenerateContent.mock.calls[0];
+    expect(content[1]).toBe("Describe the image");
+  });
+
   it("should return 500 if API key is not configured", async () => {
     // Note: This test cannot fully work because the API key is read at module load time
     // The handler will use the key that was set when the module was loaded

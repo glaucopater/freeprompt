@@ -1,7 +1,8 @@
 import { MAX_FILE_SIZE } from "../constants";
-import { AnalysisVisionData } from "../types";
+import { AnalysisVisionData, VisionPromptSource } from "../types";
+import { isExpectedVisionShape } from "./vision-shape";
 
-export const parseVisionResponseData = (data: string | undefined | null, metadata?: { processingTime: number, model: string, imageStats: { originalSize: number, resizedSize: number, originalWidth?: number, originalHeight?: number, originalAspectRatio?: number, resizedWidth?: number, resizedHeight?: number, resizedAspectRatio?: number } }) => {
+export const parseVisionResponseData = (data: string | undefined | null, metadata?: { processingTime: number, model: string, promptSource?: VisionPromptSource, imageStats: { originalSize: number, resizedSize: number, originalWidth?: number, originalHeight?: number, originalAspectRatio?: number, resizedWidth?: number, resizedHeight?: number, resizedAspectRatio?: number } }) => {
   // Handle null/undefined data
   if (!data) {
     return {
@@ -10,14 +11,32 @@ export const parseVisionResponseData = (data: string | undefined | null, metadat
       palette: [] as string[],
       processingTime: metadata?.processingTime || 0,
       model: metadata?.model || "Unknown",
+      promptSource: metadata?.promptSource,
       imageStats: metadata?.imageStats
     } as AnalysisVisionData;
   }
   
   // replace multiple times "\n\n" with "\n"  
   const filteredData = data.replace(/\n+/g, "\n");
-  const [descriptionRaw, categoriesRaw, paletteRaw] = filteredData.split("\n");
-  const responseData = { description: descriptionRaw, categories: categoriesRaw.split(",").map((category) => category.trim()), palette: paletteRaw.split(",").map((color) => color.trim()), processingTime: metadata?.processingTime || 0, model: metadata?.model || "Unknown", imageStats: metadata?.imageStats } as AnalysisVisionData;
+  const lines = filteredData.split("\n");
+
+  // A custom prompt can answer in any format. When the reply does not follow
+  // the description/categories/palette shape, keep the raw text as the
+  // description and leave categories and palette empty.
+  if (metadata?.promptSource === "custom" && !isExpectedVisionShape(lines)) {
+    return {
+      description: data.trim(),
+      categories: [] as string[],
+      palette: [] as string[],
+      processingTime: metadata?.processingTime || 0,
+      model: metadata?.model || "Unknown",
+      promptSource: "custom" as VisionPromptSource,
+      imageStats: metadata?.imageStats
+    } as AnalysisVisionData;
+  }
+
+  const [descriptionRaw, categoriesRaw, paletteRaw] = lines;
+  const responseData = { description: descriptionRaw, categories: categoriesRaw.split(",").map((category) => category.trim()), palette: paletteRaw.split(",").map((color) => color.trim()), processingTime: metadata?.processingTime || 0, model: metadata?.model || "Unknown", promptSource: metadata?.promptSource, imageStats: metadata?.imageStats } as AnalysisVisionData;
   return responseData;
 };
 
