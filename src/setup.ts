@@ -312,7 +312,7 @@ export const setupEvents = () => {
         model: genModel?.value,
         type: genType?.value,
       };
-      const response = await fetch(`${FUNCTIONS_PATH}/reve-generate-images`, {
+      const response = await fetch(`${FUNCTIONS_PATH}/gemini-generate-images`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -354,6 +354,8 @@ export const setupEvents = () => {
       console.warn("Response status:", response.status, response.statusText);
 
       let dataUri: string | null = null;
+      let title = "Generated Media";
+      let description = "";
       const contentType = response.headers.get("Content-Type");
       console.warn("Received Content-Type:", contentType);
 
@@ -362,34 +364,21 @@ export const setupEvents = () => {
         console.warn("Received base64 image (truncated):", base64Image.substring(0, 100) + "...");
         dataUri = `data:${contentType};base64,${base64Image}`;
       } else if (contentType && contentType.startsWith("application/json")) {
-        const jsonResponse = await response.json();
+        const jsonResponse = (await response.json()) as {
+          dataUri?: string | null;
+          title?: string | null;
+          description?: string | null;
+        };
         console.warn("Received JSON response:", jsonResponse);
-        dataUri = jsonResponse.dataUri; // Assuming the JSON response has a dataUri field
+        dataUri = jsonResponse.dataUri ?? null;
+        title = jsonResponse.title || title;
+        description = jsonResponse.description || "";
       } else {
         // Handle unexpected content type or error
         throw new Error(`Unexpected content type: ${contentType}`);
       }
 
       console.warn("Final data URI (truncated):", dataUri ? dataUri.substring(0, 100) + "..." : "null");
-
-      const title = "Generated Media";
-      const contentViolation =
-        response.headers.get("X-Reve-Content-Violation") || "";
-      const requestId = response.headers.get("X-Reve-Request-Id") || "";
-      const version = response.headers.get("X-Reve-Version") || "";
-      const creditsUsed = response.headers.get("X-Reve-Credits-Used") || "";
-      const creditsRemaining =
-        response.headers.get("X-Reve-Credits-Remaining") || "";
-
-      const description = [
-        requestId,
-        contentViolation,
-        creditsRemaining,
-        version,
-        creditsUsed,
-      ]
-        .filter(Boolean)
-        .join(", ");
 
       if (generatedMediaContainer) {
         generatedMediaContainer.innerHTML = "";

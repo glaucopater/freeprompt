@@ -1,3 +1,5 @@
+import { GEMINI_MODEL_INFO, IMAGE_GENERATION_MODELS } from "../../netlify/functions/models";
+
 export const GenerateMediaCard = () => `
   <div class="glass-card mt-4">
     <div class="flex items-center gap-2 mb-3">
@@ -14,15 +16,24 @@ export const GenerateMediaCard = () => `
       <div class="form-group" style="flex: 1; min-width: 140px;">
         <label for="gen-type" class="label">Media Type</label>
         <select id="gen-type" class="form-select">
-          <option value="image/jpg" selected>image/jpg</option>
-          <option value="image/png">image/png</option>
-          <option value="image/webp">image/webp</option>
+          <option value="image" selected>Image</option>
         </select>
       </div>
       <div class="form-group" style="flex: 1; min-width: 140px;">
         <label for="gen-model" class="label">Model</label>
         <select id="gen-model" class="form-select">
-          <option value="reve">reve latest</option>
+          ${IMAGE_GENERATION_MODELS.slice(0, 2).map((value, index) => {
+            const info = GEMINI_MODEL_INFO.find((model) => model.value === value);
+            const name = info
+              ? info.name.replace(/_/g, " ").replace(/GEMINI/g, "Gemini")
+              : value;
+            const description = info ? ` (${info.description})` : "";
+            return `
+              <option value="${value}" ${index === 0 ? "selected" : ""}>
+                ${name}${description}
+              </option>
+            `;
+          }).join("")}
         </select>
       </div>
     </div>
