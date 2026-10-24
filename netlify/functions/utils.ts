@@ -23,7 +23,7 @@ export const logToFile = (logData: object) => {
   try {
     const logDir = path.join(process.cwd(), "netlify", "functions", "logs");
     fs.mkdirSync(logDir, { recursive: true });
-    const logFile = path.join(logDir, "reve-generate-images.log");
+    const logFile = path.join(logDir, "gemini-generate-images.log");
     console.warn(`Logging to: ${logFile}`);
     const entry =
       JSON.stringify(

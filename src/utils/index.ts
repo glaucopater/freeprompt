@@ -100,7 +100,7 @@ export const convertWebPToPNGBase64 = (webpBase64: string) => {
 
 export const getTitleAndDescriptionWithTextResponse = (message: string) => {
   let title = "Generated Media";
-  let description = " -";
+  let description: string;
 
   const regex = /Title:\s*(\*\*)?(?<title>.+?)\1?\s*\n*\s*Description:\s*(\*\*)?(?<description>.+)\3?/s;
 

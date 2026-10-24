@@ -25,14 +25,15 @@ describe("Image Analysis Function", () => {
     vi.stubEnv("NETLIFY_GOOGLE_API_KEY", "mock-api-key");
     // Set up default mock for GoogleGenerativeAI
     vi.mocked(GoogleGenerativeAI).mockImplementation(
-      () =>
-        ({
+      function () {
+        return {
           getGenerativeModel: () => ({
             generateContent: vi.fn().mockResolvedValue({
               response: { text: () => "Mock response" },
             }),
           }),
-        } as any)
+        } as any;
+      }
     );
   });
 
@@ -60,12 +61,13 @@ describe("Image Analysis Function", () => {
     });
 
     vi.mocked(GoogleGenerativeAI).mockImplementation(
-      () =>
-        ({
+      function () {
+        return {
           getGenerativeModel: () => ({
             generateContent: mockGenerateContent,
           }),
-        } as any)
+        } as any;
+      }
     );
 
     const instance = new GoogleGenerativeAI("mock-api-key");
@@ -85,12 +87,13 @@ describe("Image Analysis Function", () => {
     });
 
     vi.mocked(GoogleGenerativeAI).mockImplementation(
-      () =>
-        ({
+      function () {
+        return {
           getGenerativeModel: () => ({
             generateContent: mockGenerateContent,
           }),
-        } as any)
+        } as any;
+      }
     );
 
     const imageData = Buffer.from("fake-image-data").toString("base64");
