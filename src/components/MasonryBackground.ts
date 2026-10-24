@@ -1,9 +1,13 @@
-const PICSUM_BASE = "https://picsum.photos";
-const ITEMS_PER_COL = 8;
+const backgroundModules = import.meta.glob("../assets/images/background/*.webp", {
+  eager: true,
+  import: "default",
+}) as Record<string, string>;
 
-function getImageUrl(seed: number, h: number): string {
-  return `${PICSUM_BASE}/seed/${seed}/400/${h}`;
-}
+export const BACKGROUND_IMAGES = Object.keys(backgroundModules)
+  .sort()
+  .map((key) => backgroundModules[key]);
+
+const ITEMS_PER_COL = 8;
 
 function isMobile(): boolean {
   return typeof window !== "undefined" && window.innerWidth < 768;
@@ -17,8 +21,9 @@ export function initMasonryBackground(): void {
   const columns = Array.from({ length: cols }, (_, colIdx) =>
     Array.from({ length: ITEMS_PER_COL }, (_, rowIdx) => {
       const seed = colIdx * 100 + rowIdx;
-      const h = 200 + ((seed * 37) % 200);
-      return { id: `${colIdx}-${rowIdx}`, url: getImageUrl(seed, h), height: h };
+      const height = 200 + ((seed * 37) % 200);
+      const imageIndex = (rowIdx * cols + colIdx) % BACKGROUND_IMAGES.length;
+      return { url: BACKGROUND_IMAGES[imageIndex], height };
     })
   );
 
@@ -33,7 +38,7 @@ export function initMasonryBackground(): void {
     trackEl.className = "masonry-bg-track";
     trackEl.style.animationDuration = `${600 + colIdx * 75}s`;
 
-    [...col, ...col].forEach((item) => {
+    [...col, ...col].forEach((item, itemIdx) => {
       const itemEl = document.createElement("div");
       itemEl.className = "masonry-bg-item";
       itemEl.style.height = `${item.height}px`;
@@ -41,7 +46,8 @@ export function initMasonryBackground(): void {
       const img = document.createElement("img");
       img.src = item.url;
       img.alt = "";
-      img.loading = "lazy";
+      img.loading = itemIdx < col.length ? "eager" : "lazy";
+      img.decoding = "async";
 
       itemEl.appendChild(img);
       trackEl.appendChild(itemEl);
@@ -51,5 +57,5 @@ export function initMasonryBackground(): void {
     columnsEl.appendChild(colEl);
   });
 
-  container.appendChild(columnsEl);
+  container.replaceChildren(columnsEl);
 }
